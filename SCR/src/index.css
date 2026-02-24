@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", serif;
+  --font-sans: "Montserrat", sans-serif;
+  --color-gold-light: #FBF5E6;
+  --color-gold: #D4AF37;
+  --color-gold-dark: #AA8222;
+}
+
+body {
+  font-family: var(--font-sans);
+  /* Gradiente de fallback luxuoso */
+  background: linear-gradient(135deg, #fdfbf7 0%, #f3eade 50%, #e8d5b7 100%);
+  position: relative;
+  min-height: 100vh;
+}
+
+body::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* IMPORTANTE: Substitua a URL abaixo pelo plano de fundo exato fornecido */
+  background-image: url('https://images.unsplash.com/photo-1578301978693-85fa9c026f19?q=80&w=2000&auto=format&fit=crop');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  opacity: 0.25; /* Ajuste a opacidade para mesclar com o gradiente se necessário */
+  z-index: -1;
+}
+
+/* Utilitários de Glassmorphism */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
+}
+
+.glass-button {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+  box-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: rgba(212, 175, 55, 0.8);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.4);
+  transform: translateY(-3px);
+}
+
+.text-gold-gradient {
+  background: linear-gradient(to right, #AA8222, #D4AF37, #AA8222);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

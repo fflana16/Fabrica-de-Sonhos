@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Orçamento com Inteligência Industrial (PCP)",
+  "description": "Sistema de Orçamento para fábrica que calcula automaticamente custos, preços de venda e prazos de entrega baseados na capacidade real de produção, com inteligência industrial (PCP).",
+  "requestFramePermissions": []
+}
