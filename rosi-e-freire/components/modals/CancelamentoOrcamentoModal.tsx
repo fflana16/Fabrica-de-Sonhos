@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+
 const CancelamentoOrcamentoModal = () => {
   return (
     <div>
-      <h2>Cancelamento de Orçamento</h2>
+      <h2>Cancelar Orçamento</h2>
+      <p>Conteúdo do modal de cancelamento.</p>
     </div>
   );
 };
