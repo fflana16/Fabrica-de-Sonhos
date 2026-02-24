@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { X, AlertTriangle } from 'lucide-react';
+import { Orcamento } from '../../SistemasContext';
 
 const CancelamentoOrcamentoModal = () => {
   return (
@@ -51,21 +53,20 @@ export const CancelamentoOrcamentoModal = ({ orcamento, onClose, onConfirm }: Ca
 
         <div className="flex flex-col gap-4 mb-6">
           <p className="text-sm text-gray-700 font-medium mb-2">Selecione o motivo do cancelamento:</p>
-          
+
           <div className="flex flex-col gap-3">
             {opcoes.map(opcao => (
-              <label 
-                key={opcao} 
-                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  justificativaSelecionada === opcao 
-                    ? 'border-red-500 bg-red-50 text-red-700 font-bold' 
-                    : 'border-gray-200 hover:border-red-300 text-gray-700'
-                }`}
+              <label
+                key={opcao}
+                className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${justificativaSelecionada === opcao
+                  ? 'border-red-500 bg-red-50 text-red-700 font-bold'
+                  : 'border-gray-200 hover:border-red-300 text-gray-700'
+                  }`}
               >
-                <input 
-                  type="radio" 
-                  name="justificativa" 
-                  value={opcao} 
+                <input
+                  type="radio"
+                  name="justificativa"
+                  value={opcao}
                   checked={justificativaSelecionada === opcao}
                   onChange={(e) => setJustificativaSelecionada(e.target.value)}
                   className="w-4 h-4 text-red-600 focus:ring-red-500"
@@ -89,13 +90,13 @@ export const CancelamentoOrcamentoModal = ({ orcamento, onClose, onConfirm }: Ca
         </div>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-red-100">
-          <button 
+          <button
             onClick={onClose}
             className="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors"
           >
             Voltar
           </button>
-          <button 
+          <button
             onClick={handleConfirm}
             disabled={!justificativaSelecionada || (justificativaSelecionada === 'Outros' && !outraJustificativa)}
             className="bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-red-500/30"
