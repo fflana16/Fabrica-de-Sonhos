@@ -12,6 +12,7 @@ import {
   where,
   getDocFromServer
 } from 'firebase/firestore';
+import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from './firebase';
 
 enum OperationType {
@@ -296,7 +297,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen to Auth state
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        try {
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error("Erro ao autenticar anonimamente:", e);
+        }
+      }
       setIsAuthReady(true);
     });
     return () => unsubscribe();
