@@ -297,14 +297,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen to Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        try {
-          await signInAnonymously(auth);
-        } catch (e) {
-          console.error("Erro ao autenticar anonimamente:", e);
-        }
-      }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthReady(true);
     });
     return () => unsubscribe();
