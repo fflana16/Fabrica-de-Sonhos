@@ -4,8 +4,8 @@ import { LogIn, Key, User, CheckCircle2, AlertCircle, RefreshCw } from 'lucide-r
 import { toast } from 'sonner';
 
 export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
-  const { login, updateUserPassword, users } = useSistemas();
-  const [mode, setMode] = useState<'login' | 'changePassword'>('login');
+  const { login, updateUserPassword, addUser, users } = useSistemas();
+  const [mode, setMode] = useState<'login' | 'changePassword' | 'register'>('login');
   const [nome, setNome] = useState('');
   const [senha, setSenha] = useState('');
   const [novaSenha, setNovaSenha] = useState('');
@@ -23,6 +23,30 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
         icon: <AlertCircle className="text-red-500" />,
       });
     }
+  };
+
+  const handleRegister = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nome || !senha || !confirmarSenha) {
+      toast.error('Preencha todos os campos.');
+      return;
+    }
+
+    if (users.find(u => u.nome.toLowerCase() === nome.toLowerCase())) {
+      toast.error('Este usuário já existe.');
+      return;
+    }
+
+    if (senha !== confirmarSenha) {
+      toast.error('As senhas não coincidem.');
+      return;
+    }
+
+    addUser({ nome, senha });
+    toast.success('Usuário cadastrado com sucesso!');
+    setMode('login');
+    setSenha('');
+    setConfirmarSenha('');
   };
 
   const handleChangePassword = (e: React.FormEvent) => {
@@ -109,14 +133,81 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
               Entrar no Sistema
             </button>
 
-            <button
-              type="button"
-              onClick={() => setMode('changePassword')}
-              className="w-full text-xs font-bold text-gold-dark hover:text-gold transition-colors flex items-center justify-center gap-1.5"
-            >
-              <RefreshCw size={14} />
-              Alterar Senha
-            </button>
+            <div className="flex flex-col gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setMode('register')}
+                className="w-full text-xs font-bold text-gold-dark hover:text-gold transition-colors flex items-center justify-center gap-1.5"
+              >
+                <User size={14} />
+                Cadastrar Novo Usuário
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode('changePassword')}
+                className="w-full text-xs font-bold text-gold-dark hover:text-gold transition-colors flex items-center justify-center gap-1.5"
+              >
+                <RefreshCw size={14} />
+                Alterar Senha
+              </button>
+            </div>
+          </form>
+        ) : mode === 'register' ? (
+          <form onSubmit={handleRegister} className="space-y-4">
+            <h2 className="text-xl font-serif font-bold text-gold-dark text-center mb-2">Novo Usuário</h2>
+            
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gold-dark uppercase tracking-wider ml-1">Nome de Usuário</label>
+              <input
+                type="text"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                placeholder="Ex: Fernando"
+                className="w-full bg-white/60 border border-gold/30 rounded-2xl py-2.5 px-4 text-sm focus:outline-none focus:border-gold transition-all"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gold-dark uppercase tracking-wider ml-1">Senha</label>
+              <input
+                type="password"
+                value={senha}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-white/60 border border-gold/30 rounded-2xl py-2.5 px-4 text-sm focus:outline-none focus:border-gold transition-all"
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-gold-dark uppercase tracking-wider ml-1">Confirmar Senha</label>
+              <input
+                type="password"
+                value={confirmarSenha}
+                onChange={(e) => setConfirmarSenha(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-white/60 border border-gold/30 rounded-2xl py-2.5 px-4 text-sm focus:outline-none focus:border-gold transition-all"
+                required
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setMode('login')}
+                className="flex-1 py-3 rounded-2xl border border-gold/30 font-bold text-gold-dark hover:bg-gold/10 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-gold-dark text-white py-3 rounded-2xl font-bold shadow-lg hover:bg-gold transition-all"
+              >
+                Cadastrar
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={handleChangePassword} className="space-y-4">

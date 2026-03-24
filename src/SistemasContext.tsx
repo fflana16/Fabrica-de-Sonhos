@@ -231,6 +231,7 @@ interface SistemasContextType {
   login: (nome: string, senha: string) => boolean;
   logout: () => void;
   updateUserPassword: (nome: string, novaSenha: string) => void;
+  addUser: (novoUser: User) => void;
   updateConfiguracoes: (novasConfigs: Partial<Configuracoes>) => void;
   addCustoFixo: (novoCusto: Omit<CustoFixo, 'id' | 'dataUltimaAlteracao'>) => void;
   updateCustoFixo: (id: string, dados: Partial<CustoFixo>) => void;
@@ -315,6 +316,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
           { nome: 'Ana Lívia', senha: 'Henrique10*' },
           { nome: 'Henrique', senha: 'Henrique10*' }
         ];
+        setUsers(initialUsers); // Fallback to show initial users while bootstrapping
         initialUsers.forEach(u => {
           setDoc(doc(db, 'users', u.nome), u).catch(e => handleFirestoreError(e, OperationType.WRITE, 'users'));
         });
@@ -410,6 +412,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       await setDoc(doc(db, 'users', nome), { nome, senha: novaSenha }, { merge: true });
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `users/${nome}`);
+    }
+  };
+
+  const addUser = async (novoUser: User) => {
+    try {
+      await setDoc(doc(db, 'users', novoUser.nome), novoUser);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `users/${novoUser.nome}`);
     }
   };
 
@@ -786,6 +796,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       updateUserPassword,
+      addUser,
       updateConfiguracoes,
       addCustoFixo,
       updateCustoFixo,
