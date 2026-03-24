@@ -1,0 +1,156 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Fields: nome, senha
+    //
+    // Collection: clientes
+    // Fields: codigo, nome, whatsapp, telefone, instagram, status, etc.
+    //
+    // Collection: materiasPrimas
+    // Fields: codigo, nome, largura, altura, custoChapa, etc.
+    //
+    // Collection: produtosPapelaria
+    // Fields: codigo, nome, tempoFabricacao, custoFabricacao, etc.
+    //
+    // Collection: produtosLaser
+    // Fields: codigo, nome, materiaPrimaCodigo, etc.
+    //
+    // Collection: custosFixos
+    // Fields: id, nome, valor, dataUltimaAlteracao
+    //
+    // Collection: configuracoes
+    // Fields: custoHoraMaquina, dataUltimaAlteracaoMaquina
+    //
+    // Collection: orcamentos
+    // Fields: id, clienteCodigo, itens, totalGeral, status, etc.
+    //
+    // Collection: pedidos
+    // Fields: id, clienteCodigo, itens, totalGeral, status, etc.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "fflana16@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasRequiredFields(['nome', 'senha']) &&
+             data.nome is string && data.nome.size() > 0 && data.nome.size() < 100 &&
+             data.senha is string && data.senha.size() >= 6;
+    }
+
+    function isValidCliente(data) {
+      return hasRequiredFields(['codigo', 'nome']) &&
+             data.codigo is string && data.codigo.size() > 0 &&
+             data.nome is string && data.nome.size() > 0 && data.nome.size() < 200;
+    }
+
+    function isValidMateriaPrima(data) {
+      return hasRequiredFields(['codigo', 'nome']) &&
+             data.codigo is string && data.codigo.size() > 0 &&
+             data.nome is string && data.nome.size() > 0;
+    }
+
+    function isValidOrcamento(data) {
+      return hasRequiredFields(['id', 'clienteCodigo', 'itens']) &&
+             data.id is string && data.clienteCodigo is string &&
+             data.itens is list;
+    }
+
+    function isValidPedido(data) {
+      return hasRequiredFields(['id', 'clienteCodigo', 'itens']) &&
+             data.id is string && data.clienteCodigo is string &&
+             data.itens is list;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidUser(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /clientes/{clienteId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidCliente(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /materiasPrimas/{mpId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidMateriaPrima(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /produtosPapelaria/{pId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && hasRequiredFields(['codigo', 'nome']);
+      allow delete: if isAdmin();
+    }
+
+    match /produtosLaser/{pId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && hasRequiredFields(['codigo', 'nome']);
+      allow delete: if isAdmin();
+    }
+
+    match /custosFixos/{cfId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && hasRequiredFields(['id', 'nome', 'valor']);
+      allow delete: if isAdmin();
+    }
+
+    match /configuracoes/{cId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin();
+    }
+
+    match /orcamentos/{oId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidOrcamento(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /pedidos/{pId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated() && isValidPedido(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}

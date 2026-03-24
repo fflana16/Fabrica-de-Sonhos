@@ -1,0 +1,264 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user for authentication",
+      "type": "object",
+      "properties": {
+        "nome": { "type": "string" },
+        "senha": { "type": "string" }
+      },
+      "required": ["nome", "senha"]
+    },
+    "Cliente": {
+      "title": "Cliente",
+      "description": "Customer information",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "dataCadastro": { "type": "string" },
+        "nome": { "type": "string" },
+        "dataNascimento": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "telefone": { "type": "string" },
+        "instagram": { "type": "string" },
+        "status": { "type": "string", "enum": ["ATIVO", "ELIMINADO"] },
+        "cpfCnpj": { "type": "string" },
+        "cep": { "type": "string" },
+        "endereco": { "type": "string" },
+        "numero": { "type": "string" },
+        "complemento": { "type": "string" },
+        "bairro": { "type": "string" },
+        "cidade": { "type": "string" },
+        "estado": { "type": "string" },
+        "operadorUltimaModificacao": { "type": "string" }
+      },
+      "required": ["codigo", "nome"]
+    },
+    "HistoricoCusto": {
+      "title": "HistoricoCusto",
+      "description": "Cost history entry",
+      "type": "object",
+      "properties": {
+        "data": { "type": "string" },
+        "valor": { "type": "number" },
+        "operador": { "type": "string" }
+      }
+    },
+    "MateriaPrima": {
+      "title": "MateriaPrima",
+      "description": "Raw material information",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "nome": { "type": "string" },
+        "largura": { "type": "number" },
+        "altura": { "type": "number" },
+        "custoChapa": { "type": "number" },
+        "areaTotal": { "type": "number" },
+        "custoPorMm2": { "type": "number" },
+        "status": { "type": "string", "enum": ["ATIVO", "ELIMINADO"] },
+        "dataCadastro": { "type": "string" },
+        "historicoCustos": {
+          "type": "array",
+          "items": { "$ref": "HistoricoCusto" }
+        }
+      },
+      "required": ["codigo", "nome"]
+    },
+    "ProdutoPapelaria": {
+      "title": "ProdutoPapelaria",
+      "description": "Stationery product information",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "nome": { "type": "string" },
+        "tempoFabricacao": { "type": "number" },
+        "custoFabricacao": { "type": "number" },
+        "precoVendaSugerido": { "type": "number" },
+        "status": { "type": "string", "enum": ["ATIVO", "ELIMINADO"] },
+        "dataCadastro": { "type": "string" },
+        "historicoCustos": {
+          "type": "array",
+          "items": { "$ref": "HistoricoCusto" }
+        }
+      },
+      "required": ["codigo", "nome"]
+    },
+    "ProdutoLaser": {
+      "title": "ProdutoLaser",
+      "description": "Laser cut product information",
+      "type": "object",
+      "properties": {
+        "codigo": { "type": "string" },
+        "nome": { "type": "string" },
+        "materiaPrimaCodigo": { "type": "string" },
+        "largura": { "type": "number" },
+        "altura": { "type": "number" },
+        "tempoMaquina": { "type": "number" },
+        "tempoPintura": { "type": "number" },
+        "tempoMontagem": { "type": "number" },
+        "status": { "type": "string", "enum": ["ATIVO", "ELIMINADO"] },
+        "dataCadastro": { "type": "string" },
+        "historicoCustos": {
+          "type": "array",
+          "items": { "$ref": "HistoricoCusto" }
+        }
+      },
+      "required": ["codigo", "nome"]
+    },
+    "CustoFixo": {
+      "title": "CustoFixo",
+      "description": "Fixed cost entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "nome": { "type": "string" },
+        "valor": { "type": "number" },
+        "dataUltimaAlteracao": { "type": "string" }
+      },
+      "required": ["id", "nome", "valor"]
+    },
+    "Configuracoes": {
+      "title": "Configuracoes",
+      "description": "Global system configurations",
+      "type": "object",
+      "properties": {
+        "custoHoraMaquina": { "type": "number" },
+        "dataUltimaAlteracaoMaquina": { "type": "string" }
+      }
+    },
+    "OrcamentoItem": {
+      "title": "OrcamentoItem",
+      "description": "Item in a budget",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "produtoCodigo": { "type": "string" },
+        "nomeProduto": { "type": "string" },
+        "quantidade": { "type": "number" },
+        "tempoMaquina": { "type": "number" },
+        "tempoPintura": { "type": "number" },
+        "tempoMontagem": { "type": "number" },
+        "custoMaterial": { "type": "number" },
+        "custoMaquina": { "type": "number" },
+        "custoMaoDeObra": { "type": "number" },
+        "custoTotal": { "type": "number" },
+        "margemLucro": { "type": "number" },
+        "precoVendaUnitario": { "type": "number" },
+        "observacoes": { "type": "string" },
+        "tipoProduto": { "type": "string", "enum": ["LASER", "PAPELARIA", "REVENDA"] },
+        "isIgreja": { "type": "boolean" }
+      }
+    },
+    "Orcamento": {
+      "title": "Orcamento",
+      "description": "Budget information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clienteCodigo": { "type": "string" },
+        "itens": {
+          "type": "array",
+          "items": { "$ref": "OrcamentoItem" }
+        },
+        "totalGeral": { "type": "number" },
+        "sinal": { "type": "number" },
+        "dataEntregaDesejada": { "type": "string" },
+        "dataSugeriaPCP": { "type": "string" },
+        "status": { "type": "string", "enum": ["RASCUNHO", "PENDENTE", "APROVADO", "CONVERTIDO", "RECUSADO", "CANCELADO"] },
+        "dataCriacao": { "type": "string" },
+        "operador": { "type": "string" },
+        "justificativaCancelamento": { "type": "string" }
+      },
+      "required": ["id", "clienteCodigo", "itens"]
+    },
+    "PedidoItem": {
+      "title": "PedidoItem",
+      "description": "Item in an order",
+      "type": "object",
+      "properties": {
+        "justificativaRecusa": { "type": "string" },
+        "aprovado": { "type": "boolean" }
+      }
+    },
+    "Pedido": {
+      "title": "Pedido",
+      "description": "Order information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orcamentoId": { "type": "string" },
+        "clienteCodigo": { "type": "string" },
+        "itens": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "totalGeral": { "type": "number" },
+        "sinalPago": { "type": "number" },
+        "formaPagamento": { "type": "string" },
+        "dataEntrega": { "type": "string" },
+        "dataSugeriaPCP": { "type": "string" },
+        "status": { "type": "string", "enum": ["Confirmado", "Em Produção", "Em Acabamento", "Pronto", "Entregue", "Prioridade Urgente", "CANCELADO"] },
+        "dataCriacao": { "type": "string" },
+        "operadorCriacao": { "type": "string" },
+        "historicoStatus": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "data": { "type": "string" },
+              "operador": { "type": "string" },
+              "observacao": { "type": "string" }
+            }
+          }
+        },
+        "dataEntregaEfetiva": { "type": "string" },
+        "recebidoPor": { "type": "string" },
+        "pagamentoSaldo": { "type": "number" },
+        "formaPagamentoSaldo": { "type": "string" },
+        "justificativaCancelamento": { "type": "string" }
+      },
+      "required": ["id", "clienteCodigo", "itens"]
+    }
+  },
+  "firestore": {
+    "/users": {
+      "schema": "User",
+      "description": "Collection of system users"
+    },
+    "/clientes": {
+      "schema": "Cliente",
+      "description": "Collection of customers"
+    },
+    "/materiasPrimas": {
+      "schema": "MateriaPrima",
+      "description": "Collection of raw materials"
+    },
+    "/produtosPapelaria": {
+      "schema": "ProdutoPapelaria",
+      "description": "Collection of stationery products"
+    },
+    "/produtosLaser": {
+      "schema": "ProdutoLaser",
+      "description": "Collection of laser cut products"
+    },
+    "/custosFixos": {
+      "schema": "CustoFixo",
+      "description": "Collection of fixed costs"
+    },
+    "/configuracoes": {
+      "schema": "Configuracoes",
+      "description": "Global system configurations"
+    },
+    "/orcamentos": {
+      "schema": "Orcamento",
+      "description": "Collection of budgets"
+    },
+    "/pedidos": {
+      "schema": "Pedido",
+      "description": "Collection of orders"
+    }
+  }
+}

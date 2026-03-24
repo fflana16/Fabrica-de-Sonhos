@@ -1,4 +1,69 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  getDocs, 
+  updateDoc, 
+  deleteDoc, 
+  onSnapshot,
+  query,
+  where,
+  getDocFromServer
+} from 'firebase/firestore';
+import { db, auth } from './firebase';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 export interface User {
   nome: string;
@@ -193,70 +258,20 @@ interface SistemasContextType {
 const SistemasContext = createContext<SistemasContextType | undefined>(undefined);
 
 export const SistemasProvider = ({ children }: { children: ReactNode }) => {
-  // Carrega do localStorage para garantir persistência entre F5
-  const [clientes, setClientes] = useState<Cliente[]>(() => {
-    const saved = localStorage.getItem('rf_clientes');
-    if (saved) return JSON.parse(saved);
-    return [];
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [materiasPrimas, setMateriasPrimas] = useState<MateriaPrima[]>([]);
+  const [produtosPapelaria, setProdutosPapelaria] = useState<ProdutoPapelaria[]>([]);
+  const [produtosLaser, setProdutosLaser] = useState<ProdutoLaser[]>([]);
+  const [configuracoes, setConfiguracoes] = useState<Configuracoes>({
+    custoHoraMaquina: 40.00,
+    dataUltimaAlteracaoMaquina: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   });
-
-  const [materiasPrimas, setMateriasPrimas] = useState<MateriaPrima[]>(() => {
-    const saved = localStorage.getItem('rf_materias_primas');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [produtosPapelaria, setProdutosPapelaria] = useState<ProdutoPapelaria[]>(() => {
-    const saved = localStorage.getItem('rf_produtos_papelaria');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [produtosLaser, setProdutosLaser] = useState<ProdutoLaser[]>(() => {
-    const saved = localStorage.getItem('rf_produtos_laser');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [configuracoes, setConfiguracoes] = useState<Configuracoes>(() => {
-    const saved = localStorage.getItem('rf_configuracoes');
-    return saved ? JSON.parse(saved) : {
-      custoHoraMaquina: 40.00,
-      dataUltimaAlteracaoMaquina: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    };
-  });
-
-  const [custosFixos, setCustosFixos] = useState<CustoFixo[]>(() => {
-    const saved = localStorage.getItem('rf_custos_fixos');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [users, setUsers] = useState<User[]>(() => {
-    const saved = localStorage.getItem('rf_users');
-    if (saved) return JSON.parse(saved);
-    return [
-      { nome: 'Fernando', senha: 'Henrique10*' },
-      { nome: 'Rosiele', senha: 'Henrique10*' },
-      { nome: 'Ana Lívia', senha: 'Henrique10*' },
-      { nome: 'Henrique', senha: 'Henrique10*' }
-    ];
-  });
-
+  const [custosFixos, setCustosFixos] = useState<CustoFixo[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('rf_current_user');
-    if (saved) {
-      setCurrentUser(JSON.parse(saved));
-    }
-  }, []);
-
-  const [orcamentos, setOrcamentos] = useState<Orcamento[]>(() => {
-    const saved = localStorage.getItem('rf_orcamentos');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [pedidos, setPedidos] = useState<Pedido[]>(() => {
-    const saved = localStorage.getItem('rf_pedidos');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
+  const [pedidos, setPedidos] = useState<Pedido[]>([]);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [clienteParaEditar, setClienteParaEditar] = useState<Cliente | null>(null);
   const [materiaPrimaParaEditar, setMateriaPrimaParaEditar] = useState<MateriaPrima | null>(null);
   const [produtoPapelariaParaEditar, setProdutoPapelariaParaEditar] = useState<ProdutoPapelaria | null>(null);
@@ -264,41 +279,104 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
   const [orcamentoParaEditar, setOrcamentoParaEditar] = useState<Orcamento | null>(null);
   const [pedidoParaEditar, setPedidoParaEditar] = useState<Pedido | null>(null);
 
+  // Test connection to Firestore
   useEffect(() => {
-    localStorage.setItem('rf_clientes', JSON.stringify(clientes));
-  }, [clientes]);
+    async function testConnection() {
+      try {
+        await getDocFromServer(doc(db, 'test', 'connection'));
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('the client is offline')) {
+          console.error("Please check your Firebase configuration.");
+        }
+      }
+    }
+    testConnection();
+  }, []);
 
+  // Listen to Auth state
   useEffect(() => {
-    localStorage.setItem('rf_materias_primas', JSON.stringify(materiasPrimas));
-  }, [materiasPrimas]);
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
+  // Real-time Firestore Listeners
   useEffect(() => {
-    localStorage.setItem('rf_produtos_papelaria', JSON.stringify(produtosPapelaria));
-  }, [produtosPapelaria]);
+    if (!isAuthReady) return;
 
-  useEffect(() => {
-    localStorage.setItem('rf_produtos_laser', JSON.stringify(produtosLaser));
-  }, [produtosLaser]);
+    const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const data = snapshot.docs.map(doc => doc.data() as User);
+      if (data.length === 0) {
+        // Initial bootstrap of users if collection is empty
+        const initialUsers = [
+          { nome: 'Fernando', senha: 'Henrique10*' },
+          { nome: 'Rosiele', senha: 'Henrique10*' },
+          { nome: 'Ana Lívia', senha: 'Henrique10*' },
+          { nome: 'Henrique', senha: 'Henrique10*' }
+        ];
+        initialUsers.forEach(u => {
+          setDoc(doc(db, 'users', u.nome), u).catch(e => handleFirestoreError(e, OperationType.WRITE, 'users'));
+        });
+      } else {
+        setUsers(data);
+      }
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
 
-  useEffect(() => {
-    localStorage.setItem('rf_configuracoes', JSON.stringify(configuracoes));
-  }, [configuracoes]);
+    const unsubClientes = onSnapshot(collection(db, 'clientes'), (snapshot) => {
+      setClientes(snapshot.docs.map(doc => doc.data() as Cliente));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'clientes'));
 
-  useEffect(() => {
-    localStorage.setItem('rf_custos_fixos', JSON.stringify(custosFixos));
-  }, [custosFixos]);
+    const unsubMP = onSnapshot(collection(db, 'materiasPrimas'), (snapshot) => {
+      setMateriasPrimas(snapshot.docs.map(doc => doc.data() as MateriaPrima));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'materiasPrimas'));
 
-  useEffect(() => {
-    localStorage.setItem('rf_orcamentos', JSON.stringify(orcamentos));
-  }, [orcamentos]);
+    const unsubProdPapelaria = onSnapshot(collection(db, 'produtosPapelaria'), (snapshot) => {
+      setProdutosPapelaria(snapshot.docs.map(doc => doc.data() as ProdutoPapelaria));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'produtosPapelaria'));
 
-  useEffect(() => {
-    localStorage.setItem('rf_pedidos', JSON.stringify(pedidos));
-  }, [pedidos]);
+    const unsubProdLaser = onSnapshot(collection(db, 'produtosLaser'), (snapshot) => {
+      setProdutosLaser(snapshot.docs.map(doc => doc.data() as ProdutoLaser));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'produtosLaser'));
 
+    const unsubConfigs = onSnapshot(doc(db, 'configuracoes', 'global'), (snapshot) => {
+      if (snapshot.exists()) {
+        setConfiguracoes(snapshot.data() as Configuracoes);
+      }
+    }, (error) => handleFirestoreError(error, OperationType.GET, 'configuracoes/global'));
+
+    const unsubCustosFixos = onSnapshot(collection(db, 'custosFixos'), (snapshot) => {
+      setCustosFixos(snapshot.docs.map(doc => doc.data() as CustoFixo));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'custosFixos'));
+
+    const unsubOrcamentos = onSnapshot(collection(db, 'orcamentos'), (snapshot) => {
+      setOrcamentos(snapshot.docs.map(doc => doc.data() as Orcamento));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'orcamentos'));
+
+    const unsubPedidos = onSnapshot(collection(db, 'pedidos'), (snapshot) => {
+      setPedidos(snapshot.docs.map(doc => doc.data() as Pedido));
+    }, (error) => handleFirestoreError(error, OperationType.LIST, 'pedidos'));
+
+    return () => {
+      unsubUsers();
+      unsubClientes();
+      unsubMP();
+      unsubProdPapelaria();
+      unsubProdLaser();
+      unsubConfigs();
+      unsubCustosFixos();
+      unsubOrcamentos();
+      unsubPedidos();
+    };
+  }, [isAuthReady]);
+
+  // Carrega currentUser do localStorage (apenas para manter a sessão do navegador)
   useEffect(() => {
-    localStorage.setItem('rf_users', JSON.stringify(users));
-  }, [users]);
+    const saved = localStorage.getItem('rf_current_user');
+    if (saved) {
+      setCurrentUser(JSON.parse(saved));
+    }
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -327,273 +405,358 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
     });
   };
 
-  const updateUserPassword = (nome: string, novaSenha: string) => {
-    setUsers(prev => prev.map(u => u.nome.toLowerCase() === nome.toLowerCase() ? { ...u, senha: novaSenha } : u));
+  const updateUserPassword = async (nome: string, novaSenha: string) => {
+    try {
+      await setDoc(doc(db, 'users', nome), { nome, senha: novaSenha }, { merge: true });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `users/${nome}`);
+    }
   };
 
-  const addCliente = (novoCliente: Cliente) => {
-    setClientes(prev => [...prev, { ...novoCliente, status: 'ATIVO', operadorUltimaModificacao: currentUser?.nome || 'Sistema' }]);
+  const addCliente = async (novoCliente: Cliente) => {
+    try {
+      const cliente = { ...novoCliente, status: 'ATIVO' as const, operadorUltimaModificacao: currentUser?.nome || 'Sistema' };
+      await setDoc(doc(db, 'clientes', novoCliente.codigo), cliente);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `clientes/${novoCliente.codigo}`);
+    }
   };
 
-  const updateCliente = (codigo: string, dadosAtualizados: Cliente) => {
-    setClientes(prev => prev.map(c => c.codigo === codigo ? { ...dadosAtualizados, status: dadosAtualizados.status || c.status || 'ATIVO', operadorUltimaModificacao: currentUser?.nome || 'Sistema' } : c));
+  const updateCliente = async (codigo: string, dadosAtualizados: Cliente) => {
+    try {
+      const cliente = { ...dadosAtualizados, operadorUltimaModificacao: currentUser?.nome || 'Sistema' };
+      await setDoc(doc(db, 'clientes', codigo), cliente);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `clientes/${codigo}`);
+    }
   };
 
-  const excluirCliente = (codigo: string) => {
-    setClientes(prev => prev.map(c => 
-      c.codigo === codigo ? { ...c, status: 'ELIMINADO', operadorUltimaModificacao: currentUser?.nome || 'Sistema' } : c
-    ));
+  const excluirCliente = async (codigo: string) => {
+    try {
+      await updateDoc(doc(db, 'clientes', codigo), { 
+        status: 'ELIMINADO', 
+        operadorUltimaModificacao: currentUser?.nome || 'Sistema' 
+      });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `clientes/${codigo}`);
+    }
   };
 
-  const addMateriaPrima = (novaMP: Omit<MateriaPrima, 'status' | 'dataCadastro' | 'historicoCustos'>) => {
-    const agora = new Date();
-    const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
-    const mpCompleta: MateriaPrima = {
-      ...novaMP,
-      status: 'ATIVO',
-      dataCadastro: dataFormatada,
-      historicoCustos: [{
-        data: dataFormatada,
-        valor: novaMP.custoChapa,
-        operador: currentUser?.nome || 'Sistema (Inicial)'
-      }]
-    };
-    setMateriasPrimas(prev => [...prev, mpCompleta]);
-  };
-
-  const updateMateriaPrima = (codigo: string, dadosAtualizados: MateriaPrima, operador: string = currentUser?.nome || 'Operador') => {
-    setMateriasPrimas(prev => prev.map(m => {
-      if (m.codigo === codigo) {
-        const agora = new Date();
-        const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        
-        const novoHistorico = [...(m.historicoCustos || []), {
+  const addMateriaPrima = async (novaMP: Omit<MateriaPrima, 'status' | 'dataCadastro' | 'historicoCustos'>) => {
+    try {
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const mpCompleta: MateriaPrima = {
+        ...novaMP,
+        status: 'ATIVO',
+        dataCadastro: dataFormatada,
+        historicoCustos: [{
           data: dataFormatada,
-          valor: dadosAtualizados.custoChapa,
-          operador: operador
-        }];
-
-        return { ...m, ...dadosAtualizados, historicoCustos: novoHistorico };
-      }
-      return m;
-    }));
+          valor: novaMP.custoChapa,
+          operador: currentUser?.nome || 'Sistema (Inicial)'
+        }]
+      };
+      await setDoc(doc(db, 'materiasPrimas', novaMP.codigo), mpCompleta);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `materiasPrimas/${novaMP.codigo}`);
+    }
   };
 
-  const removerCliente = (codigo: string) => {
-    setClientes(prev => prev.filter(c => c.codigo !== codigo));
-  };
+  const updateMateriaPrima = async (codigo: string, dadosAtualizados: MateriaPrima, operador: string = currentUser?.nome || 'Operador') => {
+    try {
+      const m = materiasPrimas.find(item => item.codigo === codigo);
+      if (!m) return;
 
-  const removerMateriaPrima = (codigo: string) => {
-    setMateriasPrimas(prev => prev.map(m => 
-      m.codigo === codigo ? { ...m, status: 'ELIMINADO', historicoCustos: [...(m.historicoCustos || []), {
-        data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        valor: m.custoChapa,
-        operador: currentUser?.nome || 'Sistema'
-      }] } : m
-    ));
-  };
-
-  const addProdutoPapelaria = (novoProduto: Omit<ProdutoPapelaria, 'status' | 'dataCadastro' | 'historicoCustos'>) => {
-    const agora = new Date();
-    const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
-    const produtoCompleto: ProdutoPapelaria = {
-      ...novoProduto,
-      status: 'ATIVO',
-      dataCadastro: dataFormatada,
-      historicoCustos: [{
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const novoHistorico = [...(m.historicoCustos || []), {
         data: dataFormatada,
-        valor: novoProduto.custoFabricacao,
-        operador: currentUser?.nome || 'Sistema (Inicial)'
-      }]
-    };
-    setProdutosPapelaria(prev => [...prev, produtoCompleto]);
+        valor: dadosAtualizados.custoChapa,
+        operador: operador
+      }];
+
+      await setDoc(doc(db, 'materiasPrimas', codigo), { ...dadosAtualizados, historicoCustos: novoHistorico });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `materiasPrimas/${codigo}`);
+    }
   };
 
-  const updateProdutoPapelaria = (codigo: string, dadosAtualizados: ProdutoPapelaria, operador: string = currentUser?.nome || 'Operador') => {
-    setProdutosPapelaria(prev => prev.map(p => {
-      if (p.codigo === codigo) {
-        const agora = new Date();
-        const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        
-        const novoHistorico = [...(p.historicoCustos || []), {
+  const removerCliente = async (codigo: string) => {
+    try {
+      await deleteDoc(doc(db, 'clientes', codigo));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `clientes/${codigo}`);
+    }
+  };
+
+  const removerMateriaPrima = async (codigo: string) => {
+    try {
+      const m = materiasPrimas.find(item => item.codigo === codigo);
+      if (!m) return;
+
+      await updateDoc(doc(db, 'materiasPrimas', codigo), { 
+        status: 'ELIMINADO', 
+        historicoCustos: [...(m.historicoCustos || []), {
+          data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          valor: m.custoChapa,
+          operador: currentUser?.nome || 'Sistema'
+        }] 
+      });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `materiasPrimas/${codigo}`);
+    }
+  };
+
+  const addProdutoPapelaria = async (novoProduto: Omit<ProdutoPapelaria, 'status' | 'dataCadastro' | 'historicoCustos'>) => {
+    try {
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const produtoCompleto: ProdutoPapelaria = {
+        ...novoProduto,
+        status: 'ATIVO',
+        dataCadastro: dataFormatada,
+        historicoCustos: [{
           data: dataFormatada,
-          valor: dadosAtualizados.custoFabricacao,
-          operador: operador
-        }];
-
-        return { ...p, ...dadosAtualizados, historicoCustos: novoHistorico };
-      }
-      return p;
-    }));
+          valor: novoProduto.custoFabricacao,
+          operador: currentUser?.nome || 'Sistema (Inicial)'
+        }]
+      };
+      await setDoc(doc(db, 'produtosPapelaria', novoProduto.codigo), produtoCompleto);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `produtosPapelaria/${novoProduto.codigo}`);
+    }
   };
 
-  const removerProdutoPapelaria = (codigo: string) => {
-    setProdutosPapelaria(prev => prev.map(p => 
-      p.codigo === codigo ? { ...p, status: 'ELIMINADO', historicoCustos: [...(p.historicoCustos || []), {
-        data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        valor: p.custoFabricacao,
-        operador: currentUser?.nome || 'Sistema'
-      }] } : p
-    ));
-  };
+  const updateProdutoPapelaria = async (codigo: string, dadosAtualizados: ProdutoPapelaria, operador: string = currentUser?.nome || 'Operador') => {
+    try {
+      const p = produtosPapelaria.find(item => item.codigo === codigo);
+      if (!p) return;
 
-  const addProdutoLaser = (novoProduto: Omit<ProdutoLaser, 'status' | 'dataCadastro' | 'historicoCustos'>, custoInicial: number = 0) => {
-    const agora = new Date();
-    const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
-    const produtoCompleto: ProdutoLaser = {
-      ...novoProduto,
-      status: 'ATIVO',
-      dataCadastro: dataFormatada,
-      historicoCustos: [{
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const novoHistorico = [...(p.historicoCustos || []), {
         data: dataFormatada,
-        valor: custoInicial,
-        operador: currentUser?.nome || 'Sistema (Inicial)'
-      }]
-    };
-    setProdutosLaser(prev => [...prev, produtoCompleto]);
+        valor: dadosAtualizados.custoFabricacao,
+        operador: operador
+      }];
+
+      await setDoc(doc(db, 'produtosPapelaria', codigo), { ...dadosAtualizados, historicoCustos: novoHistorico });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `produtosPapelaria/${codigo}`);
+    }
   };
 
-  const updateProdutoLaser = (codigo: string, dadosAtualizados: ProdutoLaser, operador: string = currentUser?.nome || 'Operador', novoCusto: number = 0) => {
-    setProdutosLaser(prev => prev.map(p => {
-      if (p.codigo === codigo) {
-        const agora = new Date();
-        const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        
-        const novoHistorico = [...(p.historicoCustos || []), {
+  const removerProdutoPapelaria = async (codigo: string) => {
+    try {
+      const p = produtosPapelaria.find(item => item.codigo === codigo);
+      if (!p) return;
+
+      await updateDoc(doc(db, 'produtosPapelaria', codigo), { 
+        status: 'ELIMINADO', 
+        historicoCustos: [...(p.historicoCustos || []), {
+          data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          valor: p.custoFabricacao,
+          operador: currentUser?.nome || 'Sistema'
+        }] 
+      });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `produtosPapelaria/${codigo}`);
+    }
+  };
+
+  const addProdutoLaser = async (novoProduto: Omit<ProdutoLaser, 'status' | 'dataCadastro' | 'historicoCustos'>, custoInicial: number = 0) => {
+    try {
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const produtoCompleto: ProdutoLaser = {
+        ...novoProduto,
+        status: 'ATIVO',
+        dataCadastro: dataFormatada,
+        historicoCustos: [{
           data: dataFormatada,
-          valor: novoCusto,
-          operador: operador
-        }];
+          valor: custoInicial,
+          operador: currentUser?.nome || 'Sistema (Inicial)'
+        }]
+      };
+      await setDoc(doc(db, 'produtosLaser', novoProduto.codigo), produtoCompleto);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `produtosLaser/${novoProduto.codigo}`);
+    }
+  };
 
-        return { ...p, ...dadosAtualizados, historicoCustos: novoHistorico };
+  const updateProdutoLaser = async (codigo: string, dadosAtualizados: ProdutoLaser, operador: string = currentUser?.nome || 'Operador', novoCusto: number = 0) => {
+    try {
+      const p = produtosLaser.find(item => item.codigo === codigo);
+      if (!p) return;
+
+      const agora = new Date();
+      const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      const novoHistorico = [...(p.historicoCustos || []), {
+        data: dataFormatada,
+        valor: novoCusto,
+        operador: operador
+      }];
+
+      await setDoc(doc(db, 'produtosLaser', codigo), { ...dadosAtualizados, historicoCustos: novoHistorico });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `produtosLaser/${codigo}`);
+    }
+  };
+
+  const removerProdutoLaser = async (codigo: string) => {
+    try {
+      const p = produtosLaser.find(item => item.codigo === codigo);
+      if (!p) return;
+
+      await updateDoc(doc(db, 'produtosLaser', codigo), { 
+        status: 'ELIMINADO', 
+        historicoCustos: [...(p.historicoCustos || []), {
+          data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          valor: 0,
+          operador: currentUser?.nome || 'Sistema'
+        }] 
+      });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `produtosLaser/${codigo}`);
+    }
+  };
+
+  const resetSistema = async () => {
+    try {
+      // This is a dangerous operation, in a real app we might want to be more careful
+      const collections = ['clientes', 'materiasPrimas', 'produtosPapelaria', 'produtosLaser', 'orcamentos', 'pedidos', 'custosFixos'];
+      for (const coll of collections) {
+        const snapshot = await getDocs(collection(db, coll));
+        for (const d of snapshot.docs) {
+          await deleteDoc(doc(db, coll, d.id));
+        }
       }
-      return p;
-    }));
+      await deleteDoc(doc(db, 'configuracoes', 'global'));
+      
+      // Force reload to ensure everything is clean
+      window.location.reload();
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, 'all');
+    }
   };
 
-  const removerProdutoLaser = (codigo: string) => {
-    setProdutosLaser(prev => prev.map(p => 
-      p.codigo === codigo ? { ...p, status: 'ELIMINADO', historicoCustos: [...(p.historicoCustos || []), {
-        data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-        valor: 0,
-        operador: currentUser?.nome || 'Sistema'
-      }] } : p
-    ));
-  };
-
-  const resetSistema = () => {
-    // Clear localStorage
-    const keysToKeep = ['rf_users', 'rf_current_user'];
-    Object.keys(localStorage).forEach(key => {
-      if (key.startsWith('rf_') && !keysToKeep.includes(key)) {
-        localStorage.removeItem(key);
-      }
-    });
-
-    // Reset States to initial values
-    setClientes([]);
-    setMateriasPrimas([]);
-    setProdutosPapelaria([]);
-    setProdutosLaser([]);
-    setOrcamentos([]);
-    setPedidos([]);
-    setConfiguracoes({
-      custoHoraMaquina: 40.00,
-      dataUltimaAlteracaoMaquina: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-    });
-    setCustosFixos([]);
-    
-    // Force reload to ensure everything is clean
-    window.location.reload();
-  };
-
-  const updateConfiguracoes = (novasConfigs: Partial<Configuracoes>) => {
-    setConfiguracoes(prev => {
-      const updated = { ...prev, ...novasConfigs };
+  const updateConfiguracoes = async (novasConfigs: Partial<Configuracoes>) => {
+    try {
+      const updated = { ...configuracoes, ...novasConfigs };
       if (novasConfigs.custoHoraMaquina !== undefined) {
         updated.dataUltimaAlteracaoMaquina = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       }
-      return updated;
-    });
-  };
-
-  const addCustoFixo = (novoCusto: Omit<CustoFixo, 'id' | 'dataUltimaAlteracao'>) => {
-    const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    const custo: CustoFixo = {
-      ...novoCusto,
-      id: Date.now().toString(),
-      dataUltimaAlteracao: agora
-    };
-    setCustosFixos(prev => [...prev, custo]);
-  };
-
-  const updateCustoFixo = (id: string, dados: Partial<CustoFixo>) => {
-    const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    setCustosFixos(prev => prev.map(c => 
-      c.id === id ? { ...c, ...dados, dataUltimaAlteracao: agora } : c
-    ));
-  };
-
-  const removerCustoFixo = (id: string) => {
-    setCustosFixos(prev => prev.filter(c => c.id !== id));
-  };
-
-  const addOrcamento = (novoOrcamento: Omit<Orcamento, 'status' | 'dataCriacao' | 'operador'>) => {
-    const orcamento: Orcamento = {
-      ...novoOrcamento,
-      status: 'RASCUNHO',
-      dataCriacao: new Date().toISOString(),
-      operador: currentUser?.nome || 'Sistema'
-    };
-    setOrcamentos(prev => [...prev, orcamento]);
-  };
-
-  const updateOrcamento = (id: string, dadosAtualizados: Partial<Orcamento>) => {
-    setOrcamentos(prev => prev.map(o => o.id === id ? { ...o, ...dadosAtualizados } : o));
-  };
-
-  const addPedido = (novoPedido: Omit<Pedido, 'id' | 'status' | 'dataCriacao' | 'operadorCriacao' | 'historicoStatus'>) => {
-    const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-    
-    // Gerar ID sequencial PC 0000000000
-    const lastPedido = pedidos.filter(p => p.id.startsWith('PC ')).sort((a, b) => b.id.localeCompare(a.id))[0];
-    let nextNum = 1;
-    if (lastPedido) {
-      const lastNum = parseInt(lastPedido.id.replace('PC ', ''));
-      nextNum = lastNum + 1;
+      await setDoc(doc(db, 'configuracoes', 'global'), updated);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'configuracoes/global');
     }
-    const newId = `PC ${nextNum.toString().padStart(10, '0')}`;
-
-    const pedido: Pedido = {
-      ...novoPedido,
-      id: newId,
-      status: 'Confirmado',
-      dataCriacao: new Date().toISOString(),
-      operadorCriacao: currentUser?.nome || 'Sistema',
-      historicoStatus: [{ status: 'Confirmado', data: agora, operador: currentUser?.nome || 'Sistema' }]
-    };
-    setPedidos(prev => [...prev, pedido]);
   };
 
-  const updatePedido = (id: string, dadosAtualizados: Partial<Pedido>, operador?: string, observacao?: string) => {
-    setPedidos(prev => prev.map(p => {
-      if (p.id === id) {
-        const updatedPedido = { ...p, ...dadosAtualizados };
-        if (dadosAtualizados.status && dadosAtualizados.status !== p.status) {
-          updatedPedido.historicoStatus = [...p.historicoStatus, {
-            status: dadosAtualizados.status,
-            data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            operador: operador || currentUser?.nome || 'Sistema',
-            observacao: observacao
-          }];
-        }
-        return updatedPedido;
+  const addCustoFixo = async (novoCusto: Omit<CustoFixo, 'id' | 'dataUltimaAlteracao'>) => {
+    try {
+      const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const id = Date.now().toString();
+      const custo: CustoFixo = {
+        ...novoCusto,
+        id,
+        dataUltimaAlteracao: agora
+      };
+      await setDoc(doc(db, 'custosFixos', id), custo);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'custosFixos');
+    }
+  };
+
+  const updateCustoFixo = async (id: string, dados: Partial<CustoFixo>) => {
+    try {
+      const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      await updateDoc(doc(db, 'custosFixos', id), { ...dados, dataUltimaAlteracao: agora });
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `custosFixos/${id}`);
+    }
+  };
+
+  const removerCustoFixo = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'custosFixos', id));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `custosFixos/${id}`);
+    }
+  };
+
+  const addOrcamento = async (novoOrcamento: Omit<Orcamento, 'status' | 'dataCriacao' | 'operador'>) => {
+    try {
+      const orcamento: Orcamento = {
+        ...novoOrcamento,
+        status: 'RASCUNHO',
+        dataCriacao: new Date().toISOString(),
+        operador: currentUser?.nome || 'Sistema'
+      };
+      await setDoc(doc(db, 'orcamentos', orcamento.id), orcamento);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `orcamentos/${novoOrcamento.id}`);
+    }
+  };
+
+  const updateOrcamento = async (id: string, dadosAtualizados: Partial<Orcamento>) => {
+    try {
+      await updateDoc(doc(db, 'orcamentos', id), dadosAtualizados);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `orcamentos/${id}`);
+    }
+  };
+
+  const addPedido = async (novoPedido: Omit<Pedido, 'id' | 'status' | 'dataCriacao' | 'operadorCriacao' | 'historicoStatus'>) => {
+    try {
+      const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      
+      // Gerar ID sequencial PC 0000000000
+      const lastPedido = pedidos.filter(p => p.id.startsWith('PC ')).sort((a, b) => b.id.localeCompare(a.id))[0];
+      let nextNum = 1;
+      if (lastPedido) {
+        const lastNum = parseInt(lastPedido.id.replace('PC ', ''));
+        nextNum = lastNum + 1;
       }
-      return p;
-    }));
+      const newId = `PC ${nextNum.toString().padStart(10, '0')}`;
+
+      const pedido: Pedido = {
+        ...novoPedido,
+        id: newId,
+        status: 'Confirmado',
+        dataCriacao: new Date().toISOString(),
+        operadorCriacao: currentUser?.nome || 'Sistema',
+        historicoStatus: [{ status: 'Confirmado', data: agora, operador: currentUser?.nome || 'Sistema' }]
+      };
+      await setDoc(doc(db, 'pedidos', newId), pedido);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'pedidos');
+    }
+  };
+
+  const updatePedido = async (id: string, dadosAtualizados: Partial<Pedido>, operador?: string, observacao?: string) => {
+    try {
+      const p = pedidos.find(item => item.id === id);
+      if (!p) return;
+
+      const updatedPedido: any = { ...dadosAtualizados };
+      if (dadosAtualizados.status && dadosAtualizados.status !== p.status) {
+        updatedPedido.historicoStatus = [...p.historicoStatus, {
+          status: dadosAtualizados.status,
+          data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+          operador: operador || currentUser?.nome || 'Sistema',
+          observacao: observacao
+        }];
+      }
+      await updateDoc(doc(db, 'pedidos', id), updatedPedido);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `pedidos/${id}`);
+    }
   };
 
   return (
