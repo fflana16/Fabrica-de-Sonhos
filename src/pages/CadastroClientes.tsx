@@ -134,12 +134,45 @@ export const CadastroClientes = ({ onNavigate }: { onNavigate: (tela: string) =>
     }
   }, [clienteParaEditar, clientes.length, currentUser]);
 
+  const fetchAddressByCep = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length !== 8) return;
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        toast.error('CEP não encontrado.');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        endereco: data.logradouro || prev.endereco,
+        bairro: data.bairro || prev.bairro,
+        cidade: data.localidade || prev.cidade,
+        estado: data.uf || prev.estado
+      }));
+      toast.success('Endereço preenchido automaticamente!');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      toast.error('Erro ao buscar o CEP. Verifique sua conexão.');
+    }
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     let maskedValue = value;
 
     if (name === 'whatsapp') maskedValue = applyMask(value, 'whatsapp');
-    if (name === 'cep') maskedValue = applyMask(value, 'cep');
+    if (name === 'cep') {
+      maskedValue = applyMask(value, 'cep');
+      const cleanCep = maskedValue.replace(/\D/g, '');
+      if (cleanCep.length === 8) {
+        fetchAddressByCep(cleanCep);
+      }
+    }
     if (name === 'cpfCnpj') maskedValue = applyMask(value, 'cpfCnpj');
     if (name === 'dataNascimento') maskedValue = applyMask(value, 'date');
 
