@@ -4,8 +4,18 @@ import { Users, CheckCircle2, XCircle, Shield, User as UserIcon, Trash2, Phone, 
 import { toast } from 'sonner';
 
 export const GerenciamentoUsuarios = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
-  const { users, updateUser, removeUser, currentUser } = useSistemas();
+  const { users, updateUser, removeUser, currentUser, clearOtherUsers } = useSistemas();
   const [loading, setLoading] = useState<string | null>(null);
+
+  const handleClearAll = async () => {
+    if (currentUser?.nome.toLowerCase() !== 'fernando') {
+      toast.error('Apenas o administrador Fernando pode realizar esta ação.');
+      return;
+    }
+    if (confirm('ATENÇÃO: Deseja realmente excluir TODOS os outros usuários? Esta ação não pode ser desfeita.')) {
+      await clearOtherUsers();
+    }
+  };
 
   const handleApprove = async (user: User, role: 'ADMIN' | 'OPERADOR') => {
     setLoading(user.nome);
@@ -47,12 +57,23 @@ export const GerenciamentoUsuarios = ({ onNavigate }: { onNavigate: (tela: strin
             <p className="text-sm text-slate-500">Autorize novos acessos e gerencie permissões</p>
           </div>
         </div>
-        <button
-          onClick={() => onNavigate('Dashboard')}
-          className="bg-white border border-gold/30 text-gold-dark px-4 py-2 rounded-xl font-bold hover:bg-gold/5 transition-all"
-        >
-          Voltar ao Início
-        </button>
+        <div className="flex gap-3">
+          {currentUser?.nome.toLowerCase() === 'fernando' && (
+            <button
+              onClick={handleClearAll}
+              className="bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-xl font-bold hover:bg-red-100 transition-all flex items-center gap-2"
+            >
+              <Trash2 size={18} />
+              Limpar Todos os Usuários
+            </button>
+          )}
+          <button
+            onClick={() => onNavigate('Dashboard')}
+            className="bg-white border border-gold/30 text-gold-dark px-4 py-2 rounded-xl font-bold hover:bg-gold/5 transition-all"
+          >
+            Voltar ao Início
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

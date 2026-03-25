@@ -164,7 +164,7 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
                   required
                 >
                   <option value="">Selecione seu usuário</option>
-                  {users.map(u => (
+                  {users.filter(u => u.status === 'ATIVO').map(u => (
                     <option key={u.nome} value={u.nome}>{u.nome}</option>
                   ))}
                 </select>
@@ -325,7 +325,7 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
                 required
               >
                 <option value="">Selecione seu usuário</option>
-                {users.map(u => (
+                {users.filter(u => u.status === 'ATIVO').map(u => (
                   <option key={u.nome} value={u.nome}>{u.nome}</option>
                 ))}
               </select>
@@ -453,7 +453,7 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
                 required
               >
                 <option value="">Selecione seu usuário</option>
-                {users.map(u => (
+                {users.filter(u => u.status === 'ATIVO').map(u => (
                   <option key={u.nome} value={u.nome}>{u.nome}</option>
                 ))}
               </select>

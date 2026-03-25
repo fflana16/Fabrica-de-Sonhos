@@ -320,7 +320,6 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen to Auth state
   useEffect(() => {
-    signInAnonymously(auth).catch(e => console.error("Error signing in anonymously:", e));
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthReady(true);
     });
@@ -685,7 +684,6 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      // This is a dangerous operation, in a real app we might want to be more careful
       const collections = ['clientes', 'materiasPrimas', 'produtosPapelaria', 'produtosLaser', 'orcamentos', 'pedidos', 'custosFixos'];
       for (const coll of collections) {
         const snapshot = await getDocs(collection(db, coll));
@@ -693,12 +691,41 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
           await deleteDoc(doc(db, coll, d.id));
         }
       }
+      
+      // Reset users except Fernando
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      for (const d of usersSnapshot.docs) {
+        const userData = d.data() as User;
+        if (userData.nome.toLowerCase() !== 'fernando') {
+          await deleteDoc(doc(db, 'users', d.id));
+        }
+      }
+
       await deleteDoc(doc(db, 'configuracoes', 'global'));
       
-      // Force reload to ensure everything is clean
-      window.location.reload();
+      toast.success('Sistema resetado com sucesso!');
+      setTimeout(() => window.location.reload(), 1500);
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, 'all');
+    }
+  };
+
+  const clearOtherUsers = async () => {
+    if (currentUser?.nome.toLowerCase() !== 'fernando') {
+      toast.error('Ação não autorizada.');
+      return;
+    }
+    try {
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      for (const d of usersSnapshot.docs) {
+        const userData = d.data() as User;
+        if (userData.nome.toLowerCase() !== 'fernando') {
+          await deleteDoc(doc(db, 'users', d.id));
+        }
+      }
+      toast.success('Tabela de usuários limpa com sucesso!');
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, 'users');
     }
   };
 
@@ -904,7 +931,8 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       removerMateriaPrima,
       removerProdutoPapelaria,
       removerProdutoLaser,
-      resetSistema
+      resetSistema,
+      clearOtherUsers
     }}>
       {children}
     </SistemasContext.Provider>
