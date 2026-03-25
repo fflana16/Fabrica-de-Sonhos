@@ -29,15 +29,22 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(nome, senha)) {
+    const result = login(nome, senha);
+    if (result.success) {
       toast.success(`Bem-vindo, ${nome}!`, {
         icon: <CheckCircle2 className="text-green-500" />,
       });
       onLoginSuccess();
     } else {
-      toast.error('Usuário ou senha incorretos.', {
-        icon: <AlertCircle className="text-red-500" />,
-      });
+      if (result.error === 'PENDING') {
+        toast.error('Seu acesso ainda não foi autorizado pelo administrador.', {
+          icon: <AlertCircle className="text-yellow-500" />,
+        });
+      } else {
+        toast.error('Usuário ou senha incorretos.', {
+          icon: <AlertCircle className="text-red-500" />,
+        });
+      }
     }
   };
 
@@ -58,8 +65,8 @@ export const Login = ({ onLoginSuccess }: { onLoginSuccess: () => void }) => {
       return;
     }
 
-    addUser({ nome, senha, telefone });
-    toast.success('Usuário cadastrado com sucesso!');
+    addUser({ nome, senha, telefone, role: 'OPERADOR', status: 'PENDENTE' });
+    toast.success('Cadastro enviado! Aguarde a autorização do administrador.');
     setMode('login');
     setSenha('');
     setConfirmarSenha('');

@@ -72,6 +72,8 @@ export interface User {
   nome: string;
   senha: string;
   telefone?: string;
+  role: 'ADMIN' | 'OPERADOR';
+  status: 'ATIVO' | 'PENDENTE';
 }
 
 export interface Cliente {
@@ -233,11 +235,12 @@ interface SistemasContextType {
   setOrcamentoParaEditar: (orcamento: Orcamento | null) => void;
   pedidoParaEditar: Pedido | null;
   setPedidoParaEditar: (pedido: Pedido | null) => void;
-  login: (nome: string, senha: string) => boolean;
+  login: (nome: string, senha: string) => { success: boolean; error?: 'INVALID' | 'PENDING' };
   logout: () => void;
   updateUserPassword: (nome: string, novaSenha: string) => void;
   updateUser: (nome: string, dados: Partial<User>) => void;
   addUser: (novoUser: User) => void;
+  removeUser: (nome: string) => void;
   updateConfiguracoes: (novasConfigs: Partial<Configuracoes>) => void;
   addCustoFixo: (novoCusto: Omit<CustoFixo, 'id' | 'dataUltimaAlteracao'>) => void;
   updateCustoFixo: (id: string, dados: Partial<CustoFixo>) => void;
@@ -330,11 +333,8 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const data = snapshot.docs.map(doc => doc.data() as User);
       if (data.length === 0) {
         // Initial bootstrap of users if collection is empty
-        const initialUsers = [
-          { nome: 'Fernando', senha: 'Henrique10*', telefone: '(11) 99999-9999' },
-          { nome: 'Rosiele', senha: 'Henrique10*', telefone: '(11) 99999-9999' },
-          { nome: 'Ana Lívia', senha: 'Henrique10*', telefone: '(11) 99999-9999' },
-          { nome: 'Henrique', senha: 'Henrique10*', telefone: '(11) 99999-9999' }
+        const initialUsers: User[] = [
+          { nome: 'Fernando', senha: 'Henrique10*', telefone: '(11) 99999-9999', role: 'ADMIN', status: 'ATIVO' }
         ];
         setUsers(initialUsers); // Fallback to show initial users while bootstrapping
         initialUsers.forEach(u => {
@@ -411,10 +411,13 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
   const login = (nome: string, senha: string) => {
     const user = users.find(u => u.nome.toLowerCase() === nome.toLowerCase() && u.senha === senha);
     if (user) {
+      if (user.status === 'PENDENTE') {
+        return { success: false, error: 'PENDING' as const };
+      }
       setCurrentUser(user);
-      return true;
+      return { success: true };
     }
-    return false;
+    return { success: false, error: 'INVALID' as const };
   };
 
   const logout = () => {
@@ -827,6 +830,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const removeUser = async (nome: string) => {
+    try {
+      await deleteDoc(doc(db, 'users', nome));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.DELETE, `users/${nome}`);
+    }
+  };
+
   return (
     <SistemasContext.Provider value={{ 
       clientes, 
@@ -856,6 +867,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       updateUserPassword,
       updateUser,
       addUser,
+      removeUser,
       updateConfiguracoes,
       addCustoFixo,
       updateCustoFixo,

@@ -18,3 +18,4 @@ export { RelatorioPedidos } from './pages/RelatorioPedidos';
 export { LinhaProducao } from './pages/LinhaProducao';
 export { CalendarioIndustrial } from './pages/CalendarioIndustrial';
 export { RelatoriosGerenciais } from './pages/RelatoriosGerenciais';
+export { GerenciamentoUsuarios } from './pages/GerenciamentoUsuarios';

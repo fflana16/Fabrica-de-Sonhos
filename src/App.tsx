@@ -23,7 +23,7 @@ import {
 import { 
   CadastroClientes, RelatorioClientes, CadastroMateriaPrima, RelatorioMateriaPrima,
   CadastroPapelaria, RelatorioPapelaria, CadastroLaser, RelatorioLaser, Configuracoes, CustosFixos, CriarOrcamento, 
-  RelatorioOrcamentos, CriarPedidoAvulso, RelatorioPedidos, LinhaProducao, CalendarioIndustrial, RelatoriosGerenciais, Login
+  RelatorioOrcamentos, CriarPedidoAvulso, RelatorioPedidos, LinhaProducao, CalendarioIndustrial, RelatoriosGerenciais, Login, GerenciamentoUsuarios
 } from './pages';
 import { SistemasProvider, useSistemas } from './SistemasContext';
 import { AniversariosModal } from './components/modals/AniversariosModal';
@@ -141,6 +141,9 @@ const Header = ({ onShowAniversarios }: { onShowAniversarios: () => void }) => {
         <div className="flex items-center gap-2 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gold/30 shadow-sm">
           <User size={18} />
           <span className="text-xs font-bold">{currentUser?.nome}</span>
+          {currentUser?.role === 'ADMIN' && (
+            <span className="text-[8px] bg-gold/20 text-gold-dark px-1.5 py-0.5 rounded-full border border-gold/30 font-black uppercase tracking-widest">Admin</span>
+          )}
           <button 
             onClick={logout}
             className="ml-2 text-[10px] font-black uppercase tracking-tighter text-red-500 hover:text-red-700 transition-colors"
@@ -170,6 +173,9 @@ const MenuButton = ({ icon: Icon, title, onClick }: { icon: any, title: string, 
 };
 
 const GridMenu = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
+  const { currentUser } = useSistemas();
+  const isAdmin = currentUser?.role === 'ADMIN';
+
   const menuItems = [
     { icon: UserPlus, title: "Cadastro de Clientes", tela: "CadastroClientes" },
     { icon: Users, title: "Relatório de Cliente", tela: "RelatorioClientes" },
@@ -179,16 +185,17 @@ const GridMenu = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
     { icon: ClipboardList, title: "Relatório de Produtos de Papelaria", tela: "RelatorioPapelaria" },
     { icon: Scissors, title: "Cadastro de Produtos de Corte a Laser", tela: "CadastroLaser" },
     { icon: ClipboardList, title: "Relatório de Produtos Laser", tela: "RelatorioLaser" },
-    { icon: Settings, title: "Custo de Máquina", tela: "Configuracoes" },
-    { icon: DollarSign, title: "Custos Fixos", tela: "CustosFixos" },
+    { icon: Settings, title: "Custo de Máquina", tela: "Configuracoes", adminOnly: true },
+    { icon: DollarSign, title: "Custos Fixos", tela: "CustosFixos", adminOnly: true },
     { icon: FileSignature, title: "Criar Orçamento", tela: "CriarOrcamento" },
     { icon: BarChart3, title: "Relatório de Orçamentos", tela: "RelatorioOrcamentos" },
     { icon: ShoppingCart, title: "Criar Pedido Avulso", tela: "CriarPedidoAvulso" },
     { icon: ClipboardList, title: "Relatório de Pedidos", tela: "RelatorioPedidos" },
     { icon: Clock, title: "Linha de Produção (O.S.)", tela: "LinhaProducao" },
     { icon: Calendar, title: "Calendário Industrial", tela: "CalendarioIndustrial" },
-    { icon: BarChart3, title: "Relatórios Gerenciais", tela: "RelatoriosGerenciais" },
-  ];
+    { icon: BarChart3, title: "Relatórios Gerenciais", tela: "RelatoriosGerenciais", adminOnly: true },
+    { icon: Users, title: "Gerenciamento de Usuários", tela: "GerenciamentoUsuarios", adminOnly: true },
+  ].filter(item => !item.adminOnly || isAdmin);
 
   return (
     <main className="flex-grow flex items-center justify-center px-4 py-2 relative z-10">
@@ -311,6 +318,7 @@ function AppContent() {
       case 'LinhaProducao': return <LinhaProducao onNavigate={handleNavigation} />;
       case 'CalendarioIndustrial': return <CalendarioIndustrial onNavigate={handleNavigation} />;
       case 'RelatoriosGerenciais': return <RelatoriosGerenciais onNavigate={handleNavigation} />;
+      case 'GerenciamentoUsuarios': return <GerenciamentoUsuarios onNavigate={handleNavigation} />;
       default: return <GridMenu onNavigate={handleNavigation} />;
     }
   };
