@@ -95,7 +95,7 @@ export const ConversaoOrcamentoModal: React.FC<ConversaoOrcamentoModalProps> = (
     }
   }, [dataEntregaDesejada, dataSugeriaPCP, addBusinessDays]);
 
-  const handleConfirmConversion = () => {
+  const handleConfirmConversion = async () => {
     const totalAprovado = itensParaPedido.reduce((acc, item) => 
       item.aprovado ? acc + (item.precoVendaUnitario * item.quantidade) : acc, 0
     );
@@ -111,23 +111,28 @@ export const ConversaoOrcamentoModal: React.FC<ConversaoOrcamentoModalProps> = (
       return;
     }
 
-    const novoPedido: any = {
-      orcamentoId: orcamento.id,
-      clienteCodigo: orcamento.clienteCodigo,
-      itens: itensParaPedido.filter(i => i.aprovado),
-      totalGeral: totalAprovado,
-      sinalPago: unmaskCurrency(sinalPago),
-      formaPagamento,
-      dataEntrega: dataEntregaDesejada,
-      dataSugeriaPCP,
-      status: 'PENDENTE',
-      dataCriacao: new Date().toISOString()
-    };
+    try {
+      const novoPedido: any = {
+        orcamentoId: orcamento.id,
+        clienteCodigo: orcamento.clienteCodigo,
+        itens: itensParaPedido.filter(i => i.aprovado),
+        totalGeral: totalAprovado,
+        sinalPago: unmaskCurrency(sinalPago),
+        formaPagamento,
+        dataEntrega: dataEntregaDesejada,
+        dataSugeriaPCP,
+        status: 'Confirmado', // Consistent with addPedido default
+        dataCriacao: new Date().toISOString()
+      };
 
-    addPedido(novoPedido);
-    updateOrcamento(orcamento.id, { status: 'CONVERTIDO' });
-    toast.success('Convertido com sucesso!');
-    onClose();
+      await addPedido(novoPedido);
+      await updateOrcamento(orcamento.id, { status: 'CONVERTIDO' });
+      toast.success('Convertido com sucesso!');
+      onClose();
+    } catch (error) {
+      console.error('Erro ao converter orçamento:', error);
+      toast.error('Ocorreu um erro ao converter o orçamento. Por favor, tente novamente.');
+    }
   };
 
   const cliente = clientes.find(c => c.codigo === orcamento.clienteCodigo);

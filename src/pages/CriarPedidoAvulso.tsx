@@ -3,7 +3,7 @@ import { PageLayout } from '../components/PageLayout';
 import { useSistemas, PedidoItem } from '../SistemasContext';
 import { toast } from 'sonner';
 import {
-  DollarSign, Calendar, Clock, Package, Plus, Trash2, Edit, Search, Info, CheckCircle2, AlertTriangle, XCircle
+  DollarSign, Calendar, Clock, Package, Plus, Trash2, Edit, Search, Info, CheckCircle2, AlertTriangle, XCircle, X, Hash
 } from 'lucide-react';
 import { InputField } from '../components/InputField';
 import { format, isSameDay } from 'date-fns';
@@ -32,7 +32,9 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
   const [formaPagamento, setFormaPagamento] = useState('');
   const [dataEntregaDesejada, setDataEntregaDesejada] = useState('');
   const [showProdutoModal, setShowProdutoModal] = useState(false);
+  const [showClienteModal, setShowClienteModal] = useState(false);
   const [searchTermProduto, setSearchTermProduto] = useState('');
+  const [searchTermCliente, setSearchTermCliente] = useState('');
   const [produtoToAdd, setProdutoToAdd] = useState<any | null>(null);
   const [quantidadeToAdd, setQuantidadeToAdd] = useState(1);
   const [observacoesToAdd, setObservacoesToAdd] = useState('');
@@ -180,7 +182,7 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
     setItensPedido(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSavePedido = () => {
+  const handleSavePedido = async () => {
     if (!clienteSelecionado) {
       toast.error('Selecione um cliente para o pedido.');
       return;
@@ -210,9 +212,14 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
       dataSugeriaPCP,
     };
 
-    addPedido(novoPedido);
-    toast.success('Pedido avulso criado com sucesso!', { icon: <CheckCircle2 className="text-gold" /> });
-    onNavigate('RelatorioPedidos');
+    try {
+      await addPedido(novoPedido);
+      toast.success('Pedido avulso criado com sucesso!', { icon: <CheckCircle2 className="text-gold" /> });
+      onNavigate('RelatorioPedidos');
+    } catch (error) {
+      console.error('Erro ao salvar pedido:', error);
+      toast.error('Erro ao salvar o pedido. Tente novamente.');
+    }
   };
 
   const filteredProdutos = useMemo(() => {
@@ -225,6 +232,15 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
     );
   }, [produtosLaser, produtosPapelaria, searchTermProduto]);
 
+  const filteredClientes = useMemo(() => {
+    return clientes.filter(c => 
+      c.status !== 'ELIMINADO' && 
+      (c.nome.toLowerCase().includes(searchTermCliente.toLowerCase()) || 
+       c.whatsapp.includes(searchTermCliente) ||
+       (c.cpfCnpj && c.cpfCnpj.includes(searchTermCliente)))
+    );
+  }, [clientes, searchTermCliente]);
+
   return (
     <PageLayout title="Criar Pedido Avulso" onBack={() => onNavigate('Dashboard')}>
       <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
@@ -232,18 +248,28 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
         {/* Cabeçalho do Pedido */}
         <div className="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl border border-gold/20">
           <div className="flex flex-col w-full md:w-auto">
-            <label htmlFor="cliente" className="text-xs font-medium text-gray-700 ml-1">Cliente</label>
-            <select
-              id="cliente"
-              value={clienteSelecionado}
-              onChange={(e) => setClienteSelecionado(e.target.value)}
-              className="w-full md:w-64 bg-white/40 backdrop-blur-sm border border-gold/30 rounded-xl py-2 px-3 text-sm text-gray-800 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all hover:bg-white/60"
-            >
-              <option value="">Selecione um cliente</option>
-              {clientes.map(c => (
-                <option key={c.codigo} value={c.codigo}>{c.nome} {c.cpfCnpj ? `(${c.cpfCnpj})` : ''}</option>
-              ))}
-            </select>
+            <label className="text-xs font-medium text-gray-700 ml-1">Cliente</label>
+            <div className="flex items-center gap-2">
+              <select
+                id="cliente"
+                value={clienteSelecionado}
+                onChange={(e) => setClienteSelecionado(e.target.value)}
+                className="w-full md:w-64 bg-white/40 backdrop-blur-sm border border-gold/30 rounded-xl py-2 px-3 text-sm text-gray-800 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all hover:bg-white/60"
+              >
+                <option value="">Selecione um cliente</option>
+                {clientes.filter(c => c.status !== 'ELIMINADO').map(c => (
+                  <option key={c.codigo} value={c.codigo}>{c.nome} {c.cpfCnpj ? `(${c.cpfCnpj})` : ''}</option>
+                ))}
+              </select>
+              <button 
+                type="button"
+                onClick={() => setShowClienteModal(true)}
+                className="p-2.5 bg-gold/10 text-gold-dark border border-gold/30 rounded-xl hover:bg-gold/20 transition-all shadow-sm"
+                title="Pesquisar Cliente"
+              >
+                <Search size={18} />
+              </button>
+            </div>
           </div>
           <div className="flex flex-col w-full md:w-auto">
             <label htmlFor="dataEntrega" className="text-xs font-medium text-gray-700 ml-1">Data de Entrega Desejada</label>
@@ -373,6 +399,66 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
             </button>
           </div>
         </div>
+
+        {/* Modal de Seleção de Cliente */}
+        {showClienteModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-2xl border border-gold/30 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+              <div className="flex justify-between items-center mb-6 border-b border-gold/20 pb-4">
+                <h3 className="text-xl font-serif font-bold text-gray-900">Pesquisar Cliente</h3>
+                <button onClick={() => setShowClienteModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="relative mb-4">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gold-dark/60">
+                  <Search size={16} />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, whatsapp ou CPF/CNPJ..."
+                  value={searchTermCliente}
+                  onChange={(e) => setSearchTermCliente(e.target.value)}
+                  className="w-full bg-white/40 backdrop-blur-sm border border-gold/30 rounded-full py-2 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:border-gold transition-all shadow-sm"
+                />
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {filteredClientes.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">Nenhum cliente encontrado.</p>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {filteredClientes.map(c => (
+                      <div 
+                        key={c.codigo} 
+                        onClick={() => {
+                          setClienteSelecionado(c.codigo);
+                          setShowClienteModal(false);
+                          setSearchTermCliente('');
+                        }}
+                        className={`p-4 rounded-xl border ${clienteSelecionado === c.codigo ? 'border-gold ring-2 ring-gold' : 'border-gray-200'} hover:border-gold transition-all cursor-pointer flex flex-col gap-1 bg-white hover:bg-gold/5`}
+                      >
+                        <div className="flex justify-between items-start">
+                          <span className="font-bold text-gray-800">{c.nome}</span>
+                          <span className="text-[10px] bg-gold/10 text-gold-dark px-2 py-0.5 rounded-full font-bold">{c.codigo}</span>
+                        </div>
+                        <div className="flex gap-4 text-xs text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Hash size={12} className="text-gold-dark" /> {c.cpfCnpj || 'Sem CPF/CNPJ'}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Search size={12} className="text-gold-dark" /> {c.whatsapp}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal de Seleção de Produto */}
         {showProdutoModal && (

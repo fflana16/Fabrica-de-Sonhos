@@ -198,7 +198,6 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{cliente?.nome || 'N/A'}</td>
                       <td className="py-4 px-6 text-sm text-gray-700">
                         {ped.itens.map(item => item.nomeProduto).join(', ')}
                       </td>
