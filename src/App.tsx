@@ -18,11 +18,12 @@ import {
   Phone,
   MapPin,
   DollarSign,
-  Cake
+  Cake,
+  Calculator
 } from 'lucide-react';
 import { 
   CadastroClientes, RelatorioClientes, CadastroMateriaPrima, RelatorioMateriaPrima,
-  CadastroPapelaria, RelatorioPapelaria, CadastroLaser, RelatorioLaser, Configuracoes, CustosFixos, CriarOrcamento, 
+  CadastroPapelaria, RelatorioPapelaria, CadastroLaser, RelatorioLaser, Configuracoes, CustoMaquina, CustosFixos, CriarOrcamento, 
   RelatorioOrcamentos, CriarPedidoAvulso, RelatorioPedidos, LinhaProducao, CalendarioIndustrial, RelatoriosGerenciais, Login, GerenciamentoUsuarios
 } from './pages';
 import { SistemasProvider, useSistemas } from './SistemasContext';
@@ -191,7 +192,8 @@ const GridMenu = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
     { icon: ClipboardList, title: "Relatório de Produtos de Papelaria", tela: "RelatorioPapelaria" },
     { icon: Scissors, title: "Cadastro de Produtos de Corte a Laser", tela: "CadastroLaser" },
     { icon: ClipboardList, title: "Relatório de Produtos Laser", tela: "RelatorioLaser" },
-    { icon: Settings, title: "Custo de Máquina", tela: "Configuracoes", adminOnly: true },
+    { icon: Calculator, title: "Custo de Máquina", tela: "CustoMaquina", adminOnly: true },
+    { icon: Settings, title: "Configurações do Sistema", tela: "Configuracoes", adminOnly: true },
     { icon: DollarSign, title: "Custos Fixos", tela: "CustosFixos", adminOnly: true },
     { icon: FileSignature, title: "Criar Orçamento", tela: "CriarOrcamento" },
     { icon: BarChart3, title: "Relatório de Orçamentos", tela: "RelatorioOrcamentos" },
@@ -316,6 +318,7 @@ function AppContent() {
       case 'CadastroLaser': return <CadastroLaser onNavigate={handleNavigation} />;
       case 'RelatorioLaser': return <RelatorioLaser onNavigate={handleNavigation} />;
       case 'Configuracoes': return <Configuracoes onNavigate={handleNavigation} />;
+      case 'CustoMaquina': return <CustoMaquina onNavigate={handleNavigation} />;
       case 'CustosFixos': return <CustosFixos onNavigate={handleNavigation} />;
       case 'CriarOrcamento': return <CriarOrcamento onNavigate={handleNavigation} />;
       case 'RelatorioOrcamentos': return <RelatorioOrcamentos onNavigate={handleNavigation} />;

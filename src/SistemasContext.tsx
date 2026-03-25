@@ -320,6 +320,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen to Auth state
   useEffect(() => {
+    signInAnonymously(auth).catch(e => console.error("Error signing in anonymously:", e));
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setIsAuthReady(true);
     });
@@ -392,6 +393,15 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       unsubPedidos();
     };
   }, [isAuthReady]);
+
+  useEffect(() => {
+    if (currentUser && users.length > 0) {
+      const updatedUser = users.find(u => u.nome === currentUser.nome);
+      if (updatedUser && (updatedUser.role !== currentUser.role || updatedUser.senha !== currentUser.senha || updatedUser.status !== currentUser.status)) {
+        setCurrentUser(updatedUser);
+      }
+    }
+  }, [users, currentUser]);
 
   // Carrega currentUser do localStorage (apenas para manter a sessão do navegador)
   useEffect(() => {

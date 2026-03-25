@@ -9,6 +9,7 @@ export { RelatorioPapelaria } from './pages/RelatorioPapelaria';
 export { CadastroLaser } from './pages/CadastroLaser';
 export { RelatorioLaser } from './pages/RelatorioLaser';
 export { Configuracoes } from './pages/Configuracoes';
+export { CustoMaquina } from './pages/CustoMaquina';
 export { CustosFixos } from './pages/CustosFixos';
 export { Login } from './pages/Login';
 export { CriarOrcamento } from './pages/CriarOrcamento';
