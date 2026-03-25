@@ -32,7 +32,7 @@ import { isToday, isSameDay, addDays } from 'date-fns';
 import { parseDate } from './utils/dateUtils';
 import { Cliente } from './SistemasContext';
 
-const Header = ({ onShowAniversarios }: { onShowAniversarios: () => void }) => {
+const Header = ({ onShowAniversarios, onNavigate }: { onShowAniversarios: () => void, onNavigate: (tela: string) => void }) => {
   const [time, setTime] = useState(new Date());
   const { currentUser, logout, clientes } = useSistemas();
   const [aniversariantesHoje, setAniversariantesHoje] = useState<Cliente[]>([]);
@@ -135,9 +135,15 @@ const Header = ({ onShowAniversarios }: { onShowAniversarios: () => void }) => {
         >
           <Cake size={20} />
         </button>
-        <button className="p-1.5 rounded-full hover:bg-white/40 transition-colors border border-transparent hover:border-gold/30 shadow-sm">
-          <Settings size={20} />
-        </button>
+        {currentUser?.role === 'ADMIN' && (
+          <button 
+            onClick={() => onNavigate('Configuracoes')}
+            className="p-1.5 rounded-full hover:bg-white/40 transition-colors border border-transparent hover:border-gold/30 shadow-sm"
+            title="Configurações"
+          >
+            <Settings size={20} />
+          </button>
+        )}
         <div className="flex items-center gap-2 bg-white/40 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gold/30 shadow-sm">
           <User size={18} />
           <span className="text-xs font-bold">{currentUser?.nome}</span>
@@ -325,7 +331,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col relative overflow-x-hidden selection:bg-gold/30 selection:text-gold-dark">
-      <Header onShowAniversarios={handleShowAniversarios} />
+      <Header onShowAniversarios={handleShowAniversarios} onNavigate={handleNavigation} />
       {renderTela()}
       <Footer />
 

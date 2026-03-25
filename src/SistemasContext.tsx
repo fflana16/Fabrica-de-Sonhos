@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from './firebase';
+import { toast } from 'sonner';
 
 enum OperationType {
   CREATE = 'create',
@@ -669,6 +670,10 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetSistema = async () => {
+    if (currentUser?.nome.toLowerCase() !== 'fernando') {
+      toast.error('Ação não autorizada.');
+      return;
+    }
     try {
       // This is a dangerous operation, in a real app we might want to be more careful
       const collections = ['clientes', 'materiasPrimas', 'produtosPapelaria', 'produtosLaser', 'orcamentos', 'pedidos', 'custosFixos'];

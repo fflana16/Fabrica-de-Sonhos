@@ -7,7 +7,7 @@ import {
   Settings, DollarSign, Save, CheckCircle2, Clock, Trash2, AlertTriangle
 } from 'lucide-react';
 export const Configuracoes = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
-  const { configuracoes, updateConfiguracoes, resetSistema } = useSistemas();
+  const { configuracoes, updateConfiguracoes, resetSistema, currentUser } = useSistemas();
 
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetPassword, setResetPassword] = useState('');
@@ -48,13 +48,20 @@ export const Configuracoes = ({ onNavigate }: { onNavigate: (tela: string) => vo
   };
 
   const handleReset = () => {
+    if (currentUser?.nome.toLowerCase() !== 'fernando') {
+      toast.error('Apenas o administrador Fernando pode realizar o reset do sistema.', {
+        icon: <AlertTriangle className="text-red-500" />,
+      });
+      return;
+    }
+
     if (!showResetPassword) {
       setShowResetPassword(true);
       return;
     }
 
-    if (resetPassword !== 'admin123') {
-      toast.error('Senha de administrador incorreta!');
+    if (resetPassword !== currentUser.senha) {
+      toast.error('Senha incorreta!');
       return;
     }
 
