@@ -25,7 +25,7 @@ export const usePCP = () => {
     ).sort((a, b) => new Date(a.dataCriacao).getTime() - new Date(b.dataCriacao).getTime());
 
     pedidosAtivos.forEach(order => {
-      let totalMinutes = order.itens.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade, 0);
+      let totalMinutes = order.itens.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade, 0);
       let remainingMins = totalMinutes;
       let checkDate = new Date(order.dataCriacao);
 

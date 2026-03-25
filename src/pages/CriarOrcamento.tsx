@@ -28,7 +28,6 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
   } = useSistemas();
   const { findAvailableDate, addBusinessDays } = usePCP();
 
-  const [orcamentoId, setOrcamentoId] = useState('');
   const [clienteSelecionado, setClienteSelecionado] = useState<string>('');
   const [viewMode, setViewMode] = useState<'COMERCIAL' | 'INDUSTRIAL'>('INDUSTRIAL');
   const [itensOrcamento, setItensOrcamento] = useState<OrcamentoItem[]>([]);
@@ -51,7 +50,6 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
 
   useEffect(() => {
     if (orcamentoParaEditar) {
-      setOrcamentoId(orcamentoParaEditar.id);
       setClienteSelecionado(orcamentoParaEditar.clienteCodigo);
       setItensOrcamento(orcamentoParaEditar.itens);
       setSinal(maskCurrency(String(orcamentoParaEditar.sinal * 100)));
@@ -62,7 +60,6 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
       const draft = localStorage.getItem('rf_orcamento_draft');
       if (draft) {
         const parsedDraft = JSON.parse(draft);
-        setOrcamentoId(parsedDraft.orcamentoId);
         setClienteSelecionado(parsedDraft.clienteSelecionado);
         setItensOrcamento(parsedDraft.itensOrcamento);
         setDataEntregaDesejada(parsedDraft.dataEntregaDesejada);
@@ -82,21 +79,13 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
   useEffect(() => {
     if (!orcamentoParaEditar) {
       const draft = {
-        orcamentoId,
         clienteSelecionado,
         itensOrcamento,
         dataEntregaDesejada
       };
       localStorage.setItem('rf_orcamento_draft', JSON.stringify(draft));
     }
-  }, [orcamentoId, clienteSelecionado, itensOrcamento, dataEntregaDesejada, orcamentoParaEditar]);
-
-  useEffect(() => {
-    if (!orcamentoParaEditar) {
-      const nextId = orcamentos.length + 1;
-      setOrcamentoId(`ORC${String(nextId).padStart(5, '0')}`);
-    }
-  }, [orcamentos.length, orcamentoParaEditar]);
+  }, [clienteSelecionado, itensOrcamento, dataEntregaDesejada, orcamentoParaEditar]);
 
   useEffect(() => {
     const novoTotal = itensOrcamento.reduce((acc, item) => acc + (item.precoVendaUnitario * item.quantidade), 0);
@@ -106,7 +95,7 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
       setSinal(maskCurrency(String(novoTotal * 0.5 * 100)));
     }
 
-    const totalMinutes = itensOrcamento.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade, 0);
+    const totalMinutes = itensOrcamento.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade, 0);
     if (totalMinutes > 0) {
       const suggestedProductionDate = findAvailableDate(totalMinutes);
       const suggestedClientDate = addBusinessDays(suggestedProductionDate, 2);
@@ -215,6 +204,7 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
       tempoMaquina: produtoToAdd.tempoMaquina || 0,
       tempoPintura: produtoToAdd.tempoPintura || 0,
       tempoMontagem: produtoToAdd.tempoMontagem || 0,
+      tempoFabricacao: produtoToAdd.tempoFabricacao || 0,
       custoMaterial,
       custoMaquina,
       custoMaoDeObra,
@@ -298,21 +288,17 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
       }
 
       const novoOrcamento = {
-        id: orcamentoId,
         clienteCodigo: clienteSelecionado,
         itens: itensOrcamento,
         totalGeral,
         sinal: unmaskCurrency(sinal),
         dataEntregaDesejada,
         dataSugeriaPCP,
-        status: 'PENDENTE' as const,
-        dataCriacao: new Date().toISOString(),
-        operador: currentUser?.nome || 'Sistema'
       };
 
-      await addOrcamento(novoOrcamento);
+      const idGerado = await addOrcamento(novoOrcamento);
       localStorage.removeItem('rf_orcamento_draft');
-      toast.success('Orçamento salvo como pendente!', { icon: <CheckCircle2 className="text-gold" /> });
+      toast.success(`Orçamento ${idGerado} salvo como pendente!`, { icon: <CheckCircle2 className="text-gold" /> });
       onNavigate('RelatorioOrcamentos');
       setIsSaving(false);
     } catch (error) {
@@ -378,7 +364,7 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
         <div className="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xl border border-gold/20">
           <div className="flex flex-col">
             <span className="text-xs font-medium text-gray-500">Nº do Orçamento</span>
-            <span className="text-xl font-bold text-gold-dark">{orcamentoId}</span>
+            <span className="text-xl font-bold text-gold-dark">{orcamentoParaEditar?.id || 'NOVO'}</span>
           </div>
           <div className="flex flex-col w-full md:w-auto">
             <label className="text-xs font-medium text-gray-700 ml-1">Cliente</label>

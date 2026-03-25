@@ -52,7 +52,7 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
 
     // Cálculo do PCP usando o hook
     const totalEsforco = itensPedido.reduce((acc, item) => {
-      return acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade;
+      return acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade;
     }, 0);
 
     if (totalEsforco > 0) {
@@ -161,6 +161,7 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
       tempoMaquina: produtoToAdd.tempoMaquina || 0,
       tempoPintura: produtoToAdd.tempoPintura || 0,
       tempoMontagem: produtoToAdd.tempoMontagem || 0,
+      tempoFabricacao: produtoToAdd.tempoFabricacao || 0,
       custoMaterial,
       custoMaquina,
       precoVendaUnitario,

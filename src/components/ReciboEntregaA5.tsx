@@ -57,6 +57,16 @@ export const ReciboEntregaA5 = forwardRef<HTMLDivElement, ReciboEntregaA5Props>(
           </ul>
         </div>
 
+        <div style={{ marginBottom: '2rem', padding: '1rem', border: '1px dashed #9ca3af', borderRadius: '0.5rem', backgroundColor: '#f9fafb' }}>
+          <p style={{ fontSize: '0.875rem', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.5rem', margin: 0 }}>
+            Autoriza publicarmos a arte no nosso Instagram e marcar você?
+          </p>
+          <div style={{ display: 'flex', gap: '2rem', fontSize: '1rem', color: '#1f2937' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>( ) Sim</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>( ) Não</span>
+          </div>
+        </div>
+
         <div style={{ marginTop: 'auto', marginBottom: '3rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: '2rem' }}>
             <div style={{ flex: 1, textAlign: 'center' }}>

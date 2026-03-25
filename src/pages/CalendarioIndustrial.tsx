@@ -103,7 +103,7 @@ export const CalendarioIndustrial = ({ onNavigate }: { onNavigate: (tela: string
     ).sort((a, b) => new Date(a.dataCriacao).getTime() - new Date(b.dataCriacao).getTime());
 
     pedidosAtivos.forEach(order => {
-      let totalMinutes = order.itens.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade, 0);
+      let totalMinutes = order.itens.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade, 0);
       let remainingMins = totalMinutes;
       let checkDate = new Date(order.dataCriacao);
 
@@ -163,7 +163,7 @@ export const CalendarioIndustrial = ({ onNavigate }: { onNavigate: (tela: string
 
     // Encontrar pedidos que contribuem para a carga deste dia
     pedidos.forEach(order => {
-      let totalMinutes = order.itens.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade, 0);
+      let totalMinutes = order.itens.reduce((acc, item) => acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade, 0);
       let remainingMins = totalMinutes;
       let checkDate = new Date(order.dataCriacao);
       let foundOnDay = false;
@@ -183,7 +183,7 @@ export const CalendarioIndustrial = ({ onNavigate }: { onNavigate: (tela: string
                 itens: order.itens.map(item => ({
                   nomeProduto: item.nomeProduto,
                   quantidade: item.quantidade,
-                  tempoTotal: (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade
+                  tempoTotal: (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade
                 })),
                 tempoTotalPedido: consume, // Apenas o tempo consumido neste dia
                 status: order.status,

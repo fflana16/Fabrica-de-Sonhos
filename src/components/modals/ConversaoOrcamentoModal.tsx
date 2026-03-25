@@ -51,7 +51,6 @@ export const ConversaoOrcamentoModal: React.FC<ConversaoOrcamentoModalProps> = (
       setItensParaPedido(orcamento.itens.map(item => ({
         ...item,
         aprovado: true,
-        justificativaRecusa: undefined,
       })));
       setSinalPago(maskCurrency((orcamento.sinal || 0).toFixed(2).replace('.', ',')));
     }
@@ -66,7 +65,7 @@ export const ConversaoOrcamentoModal: React.FC<ConversaoOrcamentoModalProps> = (
     
     // Cálculo do PCP usando o hook
     const totalEsforco = itensParaPedido.reduce((acc, item) => {
-      return item.aprovado ? acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem) * item.quantidade : acc;
+      return item.aprovado ? acc + (item.tempoMaquina + item.tempoPintura + item.tempoMontagem + (item.tempoFabricacao || 0)) * item.quantidade : acc;
     }, 0);
 
     if (totalEsforco > 0) {

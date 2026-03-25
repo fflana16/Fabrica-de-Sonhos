@@ -171,7 +171,7 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
             <tbody>
               {filteredPedidos.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
+                  <td colSpan={8} className="py-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
                 </tr>
               ) : (
                 filteredPedidos.map(ped => {

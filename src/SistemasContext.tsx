@@ -10,6 +10,8 @@ import {
   onSnapshot,
   query,
   where,
+  orderBy,
+  limit,
   getDocFromServer
 } from 'firebase/firestore';
 import { signInAnonymously, onAuthStateChanged } from 'firebase/auth';
@@ -69,6 +71,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 export interface User {
   nome: string;
   senha: string;
+  telefone?: string;
 }
 
 export interface Cliente {
@@ -155,6 +158,7 @@ export interface OrcamentoItem {
   tempoMaquina: number;
   tempoPintura: number;
   tempoMontagem: number;
+  tempoFabricacao?: number;
   custoMaterial: number;
   custoMaquina?: number;
   custoMaoDeObra?: number;
@@ -232,6 +236,7 @@ interface SistemasContextType {
   login: (nome: string, senha: string) => boolean;
   logout: () => void;
   updateUserPassword: (nome: string, novaSenha: string) => void;
+  updateUser: (nome: string, dados: Partial<User>) => void;
   addUser: (novoUser: User) => void;
   updateConfiguracoes: (novasConfigs: Partial<Configuracoes>) => void;
   addCustoFixo: (novoCusto: Omit<CustoFixo, 'id' | 'dataUltimaAlteracao'>) => void;
@@ -246,10 +251,10 @@ interface SistemasContextType {
   updateProdutoPapelaria: (codigo: string, dadosAtualizados: ProdutoPapelaria, operador?: string) => void;
   addProdutoLaser: (novoProduto: Omit<ProdutoLaser, 'status' | 'dataCadastro' | 'historicoCustos'>, custoInicial?: number) => void;
   updateProdutoLaser: (codigo: string, dadosAtualizados: ProdutoLaser, operador?: string, novoCusto?: number) => void;
-  addOrcamento: (novoOrcamento: Omit<Orcamento, 'status' | 'dataCriacao' | 'operador'>) => void;
-  updateOrcamento: (id: string, dadosAtualizados: Partial<Orcamento>) => void;
-  addPedido: (novoPedido: Omit<Pedido, 'status' | 'dataCriacao' | 'operadorCriacao' | 'historicoStatus'>) => void;
-  updatePedido: (id: string, dadosAtualizados: Partial<Pedido>, operador?: string, observacao?: string) => void;
+  addOrcamento: (novoOrcamento: Omit<Orcamento, 'id' | 'status' | 'dataCriacao' | 'operador'>) => Promise<string>;
+  updateOrcamento: (id: string, dadosAtualizados: Partial<Orcamento>) => Promise<void>;
+  addPedido: (novoPedido: Omit<Pedido, 'id' | 'status' | 'dataCriacao' | 'operadorCriacao' | 'historicoStatus'>) => Promise<string>;
+  updatePedido: (id: string, dadosAtualizados: Partial<Pedido>, operador?: string, observacao?: string) => Promise<void>;
   removerCliente: (codigo: string) => void;
   removerMateriaPrima: (codigo: string) => void;
   removerProdutoPapelaria: (codigo: string) => void;
@@ -258,6 +263,20 @@ interface SistemasContextType {
 }
 
 const SistemasContext = createContext<SistemasContextType | undefined>(undefined);
+
+const removeUndefined = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined);
+  } else if (obj !== null && typeof obj === 'object') {
+    return Object.entries(obj).reduce((acc: any, [key, value]) => {
+      if (value !== undefined) {
+        acc[key] = removeUndefined(value);
+      }
+      return acc;
+    }, {});
+  }
+  return obj;
+};
 
 export const SistemasProvider = ({ children }: { children: ReactNode }) => {
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -312,10 +331,10 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       if (data.length === 0) {
         // Initial bootstrap of users if collection is empty
         const initialUsers = [
-          { nome: 'Fernando', senha: 'Henrique10*' },
-          { nome: 'Rosiele', senha: 'Henrique10*' },
-          { nome: 'Ana Lívia', senha: 'Henrique10*' },
-          { nome: 'Henrique', senha: 'Henrique10*' }
+          { nome: 'Fernando', senha: 'Henrique10*', telefone: '(11) 99999-9999' },
+          { nome: 'Rosiele', senha: 'Henrique10*', telefone: '(11) 99999-9999' },
+          { nome: 'Ana Lívia', senha: 'Henrique10*', telefone: '(11) 99999-9999' },
+          { nome: 'Henrique', senha: 'Henrique10*', telefone: '(11) 99999-9999' }
         ];
         setUsers(initialUsers); // Fallback to show initial users while bootstrapping
         initialUsers.forEach(u => {
@@ -418,15 +437,23 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   const addUser = async (novoUser: User) => {
     try {
-      await setDoc(doc(db, 'users', novoUser.nome), novoUser);
+      await setDoc(doc(db, 'users', novoUser.nome), removeUndefined(novoUser));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `users/${novoUser.nome}`);
     }
   };
 
+  const updateUser = async (nome: string, dados: Partial<User>) => {
+    try {
+      await updateDoc(doc(db, 'users', nome), removeUndefined(dados));
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `users/${nome}`);
+    }
+  };
+
   const addCliente = async (novoCliente: Cliente) => {
     try {
-      const cliente = { ...novoCliente, status: 'ATIVO' as const, operadorUltimaModificacao: currentUser?.nome || 'Sistema' };
+      const cliente = removeUndefined({ ...novoCliente, status: 'ATIVO' as const, operadorUltimaModificacao: currentUser?.nome || 'Sistema' });
       await setDoc(doc(db, 'clientes', novoCliente.codigo), cliente);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `clientes/${novoCliente.codigo}`);
@@ -435,7 +462,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   const updateCliente = async (codigo: string, dadosAtualizados: Cliente) => {
     try {
-      const cliente = { ...dadosAtualizados, operadorUltimaModificacao: currentUser?.nome || 'Sistema' };
+      const cliente = removeUndefined({ ...dadosAtualizados, operadorUltimaModificacao: currentUser?.nome || 'Sistema' });
       await setDoc(doc(db, 'clientes', codigo), cliente);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `clientes/${codigo}`);
@@ -444,10 +471,10 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   const excluirCliente = async (codigo: string) => {
     try {
-      await updateDoc(doc(db, 'clientes', codigo), { 
+      await updateDoc(doc(db, 'clientes', codigo), removeUndefined({ 
         status: 'ELIMINADO', 
         operadorUltimaModificacao: currentUser?.nome || 'Sistema' 
-      });
+      }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `clientes/${codigo}`);
     }
@@ -458,7 +485,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const agora = new Date();
       const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const mpCompleta: MateriaPrima = {
+      const mpCompleta: MateriaPrima = removeUndefined({
         ...novaMP,
         status: 'ATIVO',
         dataCadastro: dataFormatada,
@@ -467,7 +494,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
           valor: novaMP.custoChapa,
           operador: currentUser?.nome || 'Sistema (Inicial)'
         }]
-      };
+      });
       await setDoc(doc(db, 'materiasPrimas', novaMP.codigo), mpCompleta);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `materiasPrimas/${novaMP.codigo}`);
@@ -482,13 +509,13 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const agora = new Date();
       const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const novoHistorico = [...(m.historicoCustos || []), {
+      const novoHistorico = removeUndefined([...(m.historicoCustos || []), {
         data: dataFormatada,
         valor: dadosAtualizados.custoChapa,
         operador: operador
-      }];
+      }]);
 
-      await setDoc(doc(db, 'materiasPrimas', codigo), { ...dadosAtualizados, historicoCustos: novoHistorico });
+      await setDoc(doc(db, 'materiasPrimas', codigo), removeUndefined({ ...dadosAtualizados, historicoCustos: novoHistorico }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `materiasPrimas/${codigo}`);
     }
@@ -507,14 +534,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const m = materiasPrimas.find(item => item.codigo === codigo);
       if (!m) return;
 
-      await updateDoc(doc(db, 'materiasPrimas', codigo), { 
+      await updateDoc(doc(db, 'materiasPrimas', codigo), removeUndefined({ 
         status: 'ELIMINADO', 
         historicoCustos: [...(m.historicoCustos || []), {
           data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           valor: m.custoChapa,
           operador: currentUser?.nome || 'Sistema'
         }] 
-      });
+      }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `materiasPrimas/${codigo}`);
     }
@@ -525,7 +552,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const agora = new Date();
       const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const produtoCompleto: ProdutoPapelaria = {
+      const produtoCompleto: ProdutoPapelaria = removeUndefined({
         ...novoProduto,
         status: 'ATIVO',
         dataCadastro: dataFormatada,
@@ -534,7 +561,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
           valor: novoProduto.custoFabricacao,
           operador: currentUser?.nome || 'Sistema (Inicial)'
         }]
-      };
+      });
       await setDoc(doc(db, 'produtosPapelaria', novoProduto.codigo), produtoCompleto);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `produtosPapelaria/${novoProduto.codigo}`);
@@ -549,13 +576,13 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const agora = new Date();
       const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const novoHistorico = [...(p.historicoCustos || []), {
+      const novoHistorico = removeUndefined([...(p.historicoCustos || []), {
         data: dataFormatada,
         valor: dadosAtualizados.custoFabricacao,
         operador: operador
-      }];
+      }]);
 
-      await setDoc(doc(db, 'produtosPapelaria', codigo), { ...dadosAtualizados, historicoCustos: novoHistorico });
+      await setDoc(doc(db, 'produtosPapelaria', codigo), removeUndefined({ ...dadosAtualizados, historicoCustos: novoHistorico }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `produtosPapelaria/${codigo}`);
     }
@@ -566,14 +593,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const p = produtosPapelaria.find(item => item.codigo === codigo);
       if (!p) return;
 
-      await updateDoc(doc(db, 'produtosPapelaria', codigo), { 
+      await updateDoc(doc(db, 'produtosPapelaria', codigo), removeUndefined({ 
         status: 'ELIMINADO', 
         historicoCustos: [...(p.historicoCustos || []), {
           data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           valor: p.custoFabricacao,
           operador: currentUser?.nome || 'Sistema'
         }] 
-      });
+      }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `produtosPapelaria/${codigo}`);
     }
@@ -584,7 +611,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const agora = new Date();
       const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const produtoCompleto: ProdutoLaser = {
+      const produtoCompleto: ProdutoLaser = removeUndefined({
         ...novoProduto,
         status: 'ATIVO',
         dataCadastro: dataFormatada,
@@ -593,7 +620,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
           valor: custoInicial,
           operador: currentUser?.nome || 'Sistema (Inicial)'
         }]
-      };
+      });
       await setDoc(doc(db, 'produtosLaser', novoProduto.codigo), produtoCompleto);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `produtosLaser/${novoProduto.codigo}`);
@@ -608,13 +635,13 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const agora = new Date();
       const dataFormatada = agora.toLocaleDateString('pt-BR') + ' ' + agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      const novoHistorico = [...(p.historicoCustos || []), {
+      const novoHistorico = removeUndefined([...(p.historicoCustos || []), {
         data: dataFormatada,
         valor: novoCusto,
         operador: operador
-      }];
+      }]);
 
-      await setDoc(doc(db, 'produtosLaser', codigo), { ...dadosAtualizados, historicoCustos: novoHistorico });
+      await setDoc(doc(db, 'produtosLaser', codigo), removeUndefined({ ...dadosAtualizados, historicoCustos: novoHistorico }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `produtosLaser/${codigo}`);
     }
@@ -625,14 +652,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const p = produtosLaser.find(item => item.codigo === codigo);
       if (!p) return;
 
-      await updateDoc(doc(db, 'produtosLaser', codigo), { 
+      await updateDoc(doc(db, 'produtosLaser', codigo), removeUndefined({ 
         status: 'ELIMINADO', 
         historicoCustos: [...(p.historicoCustos || []), {
           data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           valor: 0,
           operador: currentUser?.nome || 'Sistema'
         }] 
-      });
+      }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `produtosLaser/${codigo}`);
     }
@@ -659,7 +686,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
   const updateConfiguracoes = async (novasConfigs: Partial<Configuracoes>) => {
     try {
-      const updated = { ...configuracoes, ...novasConfigs };
+      const updated = removeUndefined({ ...configuracoes, ...novasConfigs });
       if (novasConfigs.custoHoraMaquina !== undefined) {
         updated.dataUltimaAlteracaoMaquina = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       }
@@ -673,11 +700,11 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
     try {
       const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       const id = Date.now().toString();
-      const custo: CustoFixo = {
+      const custo: CustoFixo = removeUndefined({
         ...novoCusto,
         id,
         dataUltimaAlteracao: agora
-      };
+      });
       await setDoc(doc(db, 'custosFixos', id), custo);
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, 'custosFixos');
@@ -687,7 +714,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
   const updateCustoFixo = async (id: string, dados: Partial<CustoFixo>) => {
     try {
       const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      await updateDoc(doc(db, 'custosFixos', id), { ...dados, dataUltimaAlteracao: agora });
+      await updateDoc(doc(db, 'custosFixos', id), removeUndefined({ ...dados, dataUltimaAlteracao: agora }));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `custosFixos/${id}`);
     }
@@ -701,23 +728,43 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const addOrcamento = async (novoOrcamento: Omit<Orcamento, 'status' | 'dataCriacao' | 'operador'>) => {
+  const addOrcamento = async (novoOrcamento: Omit<Orcamento, 'id' | 'status' | 'dataCriacao' | 'operador'>) => {
     try {
-      const orcamento: Orcamento = {
+      // Gerar ID sequencial ORC00000
+      const q = query(collection(db, 'orcamentos'), orderBy('id', 'desc'), limit(1));
+      const snapshot = await getDocs(q);
+      let nextNum = 1;
+      
+      if (!snapshot.empty) {
+        const lastOrc = snapshot.docs[0].data() as Orcamento;
+        if (lastOrc.id.startsWith('ORC')) {
+          const lastNum = parseInt(lastOrc.id.replace('ORC', ''));
+          if (!isNaN(lastNum)) {
+            nextNum = lastNum + 1;
+          }
+        }
+      }
+      
+      const newId = `ORC${String(nextNum).padStart(5, '0')}`;
+
+      const orcamento: Orcamento = removeUndefined({
         ...novoOrcamento,
-        status: 'RASCUNHO',
+        id: newId,
+        status: 'PENDENTE',
         dataCriacao: new Date().toISOString(),
         operador: currentUser?.nome || 'Sistema'
-      };
-      await setDoc(doc(db, 'orcamentos', orcamento.id), orcamento);
+      });
+      await setDoc(doc(db, 'orcamentos', newId), orcamento);
+      return newId;
     } catch (e) {
-      handleFirestoreError(e, OperationType.WRITE, `orcamentos/${novoOrcamento.id}`);
+      handleFirestoreError(e, OperationType.WRITE, 'orcamentos');
+      throw e;
     }
   };
 
   const updateOrcamento = async (id: string, dadosAtualizados: Partial<Orcamento>) => {
     try {
-      await updateDoc(doc(db, 'orcamentos', id), dadosAtualizados);
+      await updateDoc(doc(db, 'orcamentos', id), removeUndefined(dadosAtualizados));
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `orcamentos/${id}`);
     }
@@ -727,26 +774,36 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
     try {
       const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       
-      // Gerar ID sequencial PC 0000000000
-      const lastPedido = pedidos.filter(p => p.id.startsWith('PC ')).sort((a, b) => b.id.localeCompare(a.id))[0];
+      // Gerar ID sequencial PC 0000000000 buscando do servidor para evitar duplicatas
+      const q = query(collection(db, 'pedidos'), orderBy('id', 'desc'), limit(1));
+      const snapshot = await getDocs(q);
       let nextNum = 1;
-      if (lastPedido) {
-        const lastNum = parseInt(lastPedido.id.replace('PC ', ''));
-        nextNum = lastNum + 1;
+
+      if (!snapshot.empty) {
+        const lastPed = snapshot.docs[0].data() as Pedido;
+        if (lastPed.id.startsWith('PC ')) {
+          const lastNum = parseInt(lastPed.id.replace('PC ', ''));
+          if (!isNaN(lastNum)) {
+            nextNum = lastNum + 1;
+          }
+        }
       }
+      
       const newId = `PC ${nextNum.toString().padStart(10, '0')}`;
 
-      const pedido: Pedido = {
+      const pedido: Pedido = removeUndefined({
         ...novoPedido,
         id: newId,
         status: 'Confirmado',
         dataCriacao: new Date().toISOString(),
         operadorCriacao: currentUser?.nome || 'Sistema',
         historicoStatus: [{ status: 'Confirmado', data: agora, operador: currentUser?.nome || 'Sistema' }]
-      };
+      });
       await setDoc(doc(db, 'pedidos', newId), pedido);
+      return newId;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, 'pedidos');
+      throw e;
     }
   };
 
@@ -755,14 +812,14 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       const p = pedidos.find(item => item.id === id);
       if (!p) return;
 
-      const updatedPedido: any = { ...dadosAtualizados };
+      const updatedPedido: any = removeUndefined({ ...dadosAtualizados });
       if (dadosAtualizados.status && dadosAtualizados.status !== p.status) {
-        updatedPedido.historicoStatus = [...p.historicoStatus, {
+        updatedPedido.historicoStatus = removeUndefined([...p.historicoStatus, {
           status: dadosAtualizados.status,
           data: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
           operador: operador || currentUser?.nome || 'Sistema',
           observacao: observacao
-        }];
+        }]);
       }
       await updateDoc(doc(db, 'pedidos', id), updatedPedido);
     } catch (e) {
@@ -797,6 +854,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
       login,
       logout,
       updateUserPassword,
+      updateUser,
       addUser,
       updateConfiguracoes,
       addCustoFixo,

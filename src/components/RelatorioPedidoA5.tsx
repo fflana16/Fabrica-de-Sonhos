@@ -13,15 +13,8 @@ interface RelatorioPedidoA5Props {
 export const RelatorioPedidoA5 = forwardRef<HTMLDivElement, RelatorioPedidoA5Props>(
   ({ pedido, cliente, materiasPrimas }, ref) => {
     const dataAtual = new Date();
-    const isIgreja = pedido.itens.some(item => item.isIgreja);
-
     return (
       <div ref={ref} style={{ padding: '2rem', margin: '0 auto', width: '148mm', minHeight: '210mm', fontFamily: 'sans-serif', backgroundColor: '#ffffff', color: '#000000', position: 'relative' }}>
-        {isIgreja && (
-          <div style={{ position: 'absolute', top: '1rem', right: '1rem', backgroundColor: '#fef3c7', color: '#92400e', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 'bold', border: '1px solid #f59e0b', zIndex: 10 }}>
-            PEDIDO PARA IGREJA
-          </div>
-        )}
         {/* Cabeçalho */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #1f2937', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
