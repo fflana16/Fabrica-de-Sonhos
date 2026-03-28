@@ -38,6 +38,7 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
   const [showProdutoModal, setShowProdutoModal] = useState(false);
   const [showClienteModal, setShowClienteModal] = useState(false);
   const [searchTermProduto, setSearchTermProduto] = useState('');
+  const [filterTipoProduto, setFilterTipoProduto] = useState<'TODOS' | 'PAPELARIA' | 'LASER'>('TODOS');
   const [searchTermCliente, setSearchTermCliente] = useState('');
   const [produtoToAdd, setProdutoToAdd] = useState<any | null>(null);
   const [quantidadeToAdd, setQuantidadeToAdd] = useState(1);
@@ -312,12 +313,13 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
     const allProducts = [
       ...produtosLaser.map(p => ({ ...p, tipo: 'LASER' })),
       ...produtosPapelaria.map(p => ({ ...p, tipo: 'PAPELARIA' }))
-      // Adicionar produtos de revenda se houver
     ];
     return allProducts.filter(p => 
-      p.nome.toLowerCase().includes(searchTermProduto.toLowerCase()) && p.status === 'ATIVO'
+      p.nome.toLowerCase().includes(searchTermProduto.toLowerCase()) && 
+      p.status === 'ATIVO' &&
+      (filterTipoProduto === 'TODOS' || p.tipo === filterTipoProduto)
     );
-  }, [produtosLaser, produtosPapelaria, searchTermProduto]);
+  }, [produtosLaser, produtosPapelaria, searchTermProduto, filterTipoProduto]);
 
   const filteredClientes = useMemo(() => {
     return clientes.filter(c => 
@@ -680,38 +682,89 @@ export const CriarOrcamento = ({ onNavigate }: { onNavigate: (tela: string) => v
                 </button>
               </div>
 
-              <div className="relative mb-4">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gold-dark/60">
-                  <Search size={16} />
+              <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="relative flex-1">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gold-dark/60">
+                    <Search size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar produto por nome..."
+                    value={searchTermProduto}
+                    onChange={(e) => setSearchTermProduto(e.target.value)}
+                    className="w-full bg-white/40 backdrop-blur-sm border border-gold/30 rounded-full py-2 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:border-gold transition-all shadow-sm"
+                  />
                 </div>
-                <input
-                  type="text"
-                  placeholder="Buscar produto por nome..."
-                  value={searchTermProduto}
-                  onChange={(e) => setSearchTermProduto(e.target.value)}
-                  className="w-full bg-white/40 backdrop-blur-sm border border-gold/30 rounded-full py-2 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:border-gold transition-all shadow-sm"
-                />
+                <div className="flex items-center bg-gold/10 p-1 rounded-xl border border-gold/20">
+                  <button
+                    onClick={() => setFilterTipoProduto('TODOS')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${filterTipoProduto === 'TODOS' ? 'bg-gold-dark text-white shadow-sm' : 'text-gold-dark hover:bg-gold/10'}`}
+                  >
+                    TODOS
+                  </button>
+                  <button
+                    onClick={() => setFilterTipoProduto('PAPELARIA')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${filterTipoProduto === 'PAPELARIA' ? 'bg-gold-dark text-white shadow-sm' : 'text-gold-dark hover:bg-gold/10'}`}
+                  >
+                    PAPELARIA
+                  </button>
+                  <button
+                    onClick={() => setFilterTipoProduto('LASER')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${filterTipoProduto === 'LASER' ? 'bg-gold-dark text-white shadow-sm' : 'text-gold-dark hover:bg-gold/10'}`}
+                  >
+                    LASER
+                  </button>
+                </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6">
+              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 border border-gold/20 rounded-2xl overflow-hidden">
                 {filteredProdutos.length === 0 ? (
                   <p className="text-gray-500 text-center py-8">Nenhum produto encontrado.</p>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {filteredProdutos.map(prod => (
-                      <div 
-                        key={prod.codigo} 
-                        onClick={() => setProdutoToAdd(prod)}
-                        className={`p-4 rounded-xl border ${produtoToAdd?.codigo === prod.codigo ? 'border-gold ring-2 ring-gold' : 'border-gray-200'} hover:border-gold transition-all cursor-pointer flex flex-col gap-1`}
-                      >
-                        <span className="font-semibold text-gray-800">{prod.nome} ({prod.tipo})</span>
-                        <span className="text-xs text-gray-500">Preço de Venda: R$ {calcularPrecoItem(prod, 1).precoVendaUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                        {(prod.tipo === 'LASER' || prod.tipo === 'PAPELARIA') && (
-                          <span className="text-[10px] text-gray-400">Tempo de Fabricação: {prod.tempoMaquina || prod.tempoFabricacao}min</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="sticky top-0 bg-gold/10 z-10">
+                      <tr className="text-[10px] font-bold text-gold-dark uppercase tracking-wider">
+                        <th className="px-4 py-3">Produto</th>
+                        <th className="px-4 py-3">Tipo</th>
+                        <th className="px-4 py-3 text-right">Preço Sugerido</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gold/10">
+                      {filteredProdutos.map(prod => {
+                        const precoSugerido = calcularPrecoItem(prod, 1).precoVendaUnitario;
+                        const materiaPrima = prod.tipo === 'LASER' 
+                          ? materiasPrimas.find(mp => mp.codigo === prod.materiaPrimaCodigo)?.nome 
+                          : null;
+                        
+                        return (
+                          <tr 
+                            key={prod.codigo} 
+                            onClick={() => setProdutoToAdd(prod)}
+                            className={`cursor-pointer transition-colors ${produtoToAdd?.codigo === prod.codigo ? 'bg-gold/20' : 'hover:bg-gold/5'}`}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex flex-col">
+                                <span className="font-semibold text-gray-800 text-sm">{prod.nome}</span>
+                                {materiaPrima && (
+                                  <span className="text-[10px] text-gray-500 italic">M.P.: {materiaPrima}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${prod.tipo === 'LASER' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                {prod.tipo}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <span className="text-sm font-bold text-gold-dark">
+                                R$ {precoSugerido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 )}
               </div>
 

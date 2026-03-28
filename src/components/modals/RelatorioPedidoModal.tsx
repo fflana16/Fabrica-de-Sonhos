@@ -197,7 +197,9 @@ export const RelatorioPedidoModal = ({ pedido, onClose, onEdit }: RelatorioPedid
           <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
             <button 
               onClick={() => onEdit(pedido)}
-              className="bg-gradient-to-r from-gold-dark to-gold text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-gold/30 text-sm"
+              disabled={pedido.status === 'CANCELADO' || pedido.status === 'Entregue'}
+              className={`bg-gradient-to-r from-gold-dark to-gold text-white px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-transform shadow-lg shadow-gold/30 text-sm ${pedido.status === 'CANCELADO' || pedido.status === 'Entregue' ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105'}`}
+              title={pedido.status === 'Entregue' ? "Pedidos entregues não podem ser editados" : pedido.status === 'CANCELADO' ? "Pedidos cancelados não podem ser editados" : "Editar Pedido"}
             >
               <Edit size={18} />
               Editar Pedido

@@ -17,7 +17,7 @@ export const GerenciamentoUsuarios = ({ onNavigate }: { onNavigate: (tela: strin
     }
   };
 
-  const handleApprove = async (user: User, role: 'ADMIN' | 'OPERADOR') => {
+  const handleApprove = async (user: User, role: 'ADMIN' | 'OPERADOR' | 'VISITANTE') => {
     setLoading(user.nome);
     try {
       await updateUser(user.nome, { status: 'ATIVO', role });
@@ -118,24 +118,32 @@ export const GerenciamentoUsuarios = ({ onNavigate }: { onNavigate: (tela: strin
                     </button>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={() => handleApprove(user, 'OPERADOR')}
-                      disabled={loading === user.nome}
-                      className="bg-gold/10 text-gold-dark py-2 rounded-xl text-xs font-bold hover:bg-gold/20 transition-all flex items-center justify-center gap-2"
-                    >
-                      <UserIcon size={14} />
-                      Aprovar como Operador
-                    </button>
-                    <button
-                      onClick={() => handleApprove(user, 'ADMIN')}
-                      disabled={loading === user.nome}
-                      className="bg-gold-dark text-white py-2 rounded-xl text-xs font-bold hover:bg-gold transition-all flex items-center justify-center gap-2"
-                    >
-                      <Shield size={14} />
-                      Aprovar como Admin
-                    </button>
-                  </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => handleApprove(user, 'VISITANTE')}
+                        disabled={loading === user.nome}
+                        className="bg-blue-50 text-blue-600 py-2 rounded-xl text-[10px] font-bold hover:bg-blue-100 transition-all flex items-center justify-center gap-1"
+                      >
+                        <UserIcon size={12} />
+                        Aprovar Visitante
+                      </button>
+                      <button
+                        onClick={() => handleApprove(user, 'OPERADOR')}
+                        disabled={loading === user.nome}
+                        className="bg-gold/10 text-gold-dark py-2 rounded-xl text-[10px] font-bold hover:bg-gold/20 transition-all flex items-center justify-center gap-1"
+                      >
+                        <UserIcon size={12} />
+                        Aprovar Operador
+                      </button>
+                      <button
+                        onClick={() => handleApprove(user, 'ADMIN')}
+                        disabled={loading === user.nome}
+                        className="bg-gold-dark text-white py-2 rounded-xl text-[10px] font-bold hover:bg-gold transition-all flex items-center justify-center gap-1"
+                      >
+                        <Shield size={12} />
+                        Aprovar Admin
+                      </button>
+                    </div>
                 </div>
               ))}
             </div>

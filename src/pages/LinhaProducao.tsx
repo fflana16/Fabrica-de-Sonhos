@@ -9,7 +9,19 @@ import { format, differenceInDays, addDays, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { safeFormat, parseDate } from '../utils/dateUtils';
 
-export const LinhaProducao = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
+export const LinhaProducao = ({ 
+  onNavigate, 
+  onBack,
+  onBackStep,
+  onBackToCategory,
+  categoryName 
+}: { 
+  onNavigate: (tela: string) => void;
+  onBack: () => void;
+  onBackStep?: () => void;
+  onBackToCategory?: () => void;
+  categoryName?: string;
+}) => {
   const { pedidos, clientes, updatePedidoStatus } = useSistemas();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | Pedido['status']>('TODOS');
@@ -80,8 +92,14 @@ export const LinhaProducao = ({ onNavigate }: { onNavigate: (tela: string) => vo
   };
 
   return (
-    <PageLayout title="Linha de Produção (O.S.)" onBack={() => onNavigate('Dashboard')}>
-      <div className="w-full max-w-7xl mx-auto mt-8 flex flex-col gap-6">
+    <PageLayout 
+      title="Linha de Produção (O.S.)" 
+      onBack={onBack} 
+      onBackStep={onBackStep}
+      onBackToCategory={onBackToCategory}
+      categoryName={categoryName}
+    >
+      <div className="w-full max-w-[98%] mx-auto mt-8 flex flex-col gap-6">
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="relative w-full md:w-1/3">
@@ -114,7 +132,7 @@ export const LinhaProducao = ({ onNavigate }: { onNavigate: (tela: string) => vo
           </div>
         </div>
 
-        <div className="glass-panel rounded-3xl overflow-hidden shadow-xl border border-gold/20">
+        <div className="glass-panel rounded-3xl overflow-x-auto shadow-xl border border-gold/20">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-gold/15 border-b border-gold/20">

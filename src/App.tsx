@@ -24,7 +24,7 @@ import {
 import { 
   CadastroClientes, RelatorioClientes, CadastroMateriaPrima, RelatorioMateriaPrima,
   CadastroPapelaria, RelatorioPapelaria, CadastroLaser, RelatorioLaser, Configuracoes, CustoMaquina, CustosFixos, CriarOrcamento, 
-  RelatorioOrcamentos, CriarPedidoAvulso, RelatorioPedidos, LinhaProducao, CalendarioIndustrial, RelatoriosGerenciais, Login, GerenciamentoUsuarios
+  RelatorioOrcamentos, CriarPedidoAvulso, RelatorioPedidos, LinhaProducao, CalendarioIndustrial, RelatoriosGerenciais, Login, GerenciamentoUsuarios, RelatorioUsuarios
 } from './pages';
 import { SistemasProvider, useSistemas } from './SistemasContext';
 import { AniversariosModal } from './components/modals/AniversariosModal';
@@ -179,41 +179,107 @@ const MenuButton = ({ icon: Icon, title, onClick }: { icon: any, title: string, 
   );
 };
 
-const GridMenu = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
+const GridMenu = ({ onNavigate, menuAtivo, setMenuAtivo }: { onNavigate: (tela: string) => void, menuAtivo: string, setMenuAtivo: (m: any) => void }) => {
   const { currentUser } = useSistemas();
   const isAdmin = currentUser?.role === 'ADMIN';
+  const isVisitante = currentUser?.role === 'VISITANTE';
 
-  const menuItems = [
-    { icon: UserPlus, title: "Cadastro de Clientes", tela: "CadastroClientes" },
-    { icon: Users, title: "Relatório de Cliente", tela: "RelatorioClientes" },
-    { icon: Package, title: "Cadastro de Matéria-Prima", tela: "CadastroMateriaPrima" },
-    { icon: ClipboardList, title: "Relatório de Matéria-Prima", tela: "RelatorioMateriaPrima" },
-    { icon: BookOpen, title: "Cadastro de Produtos de Papelaria", tela: "CadastroPapelaria" },
-    { icon: ClipboardList, title: "Relatório de Produtos de Papelaria", tela: "RelatorioPapelaria" },
-    { icon: Scissors, title: "Cadastro de Produtos de Corte a Laser", tela: "CadastroLaser" },
-    { icon: ClipboardList, title: "Relatório de Produtos Laser", tela: "RelatorioLaser" },
-    { icon: Calculator, title: "Custo de Máquina", tela: "CustoMaquina", adminOnly: true },
-    { icon: Settings, title: "Configurações do Sistema", tela: "Configuracoes", adminOnly: true },
-    { icon: DollarSign, title: "Custos Fixos", tela: "CustosFixos", adminOnly: true },
-    { icon: FileSignature, title: "Criar Orçamento", tela: "CriarOrcamento" },
-    { icon: BarChart3, title: "Relatório de Orçamentos", tela: "RelatorioOrcamentos" },
-    { icon: ShoppingCart, title: "Criar Pedido Avulso", tela: "CriarPedidoAvulso" },
-    { icon: ClipboardList, title: "Relatório de Pedidos", tela: "RelatorioPedidos" },
-    { icon: Clock, title: "Linha de Produção (O.S.)", tela: "LinhaProducao" },
-    { icon: Calendar, title: "Calendário Industrial", tela: "CalendarioIndustrial" },
-    { icon: BarChart3, title: "Relatórios Gerenciais", tela: "RelatoriosGerenciais", adminOnly: true },
-    { icon: Users, title: "Gerenciamento de Usuários", tela: "GerenciamentoUsuarios", adminOnly: true },
-  ].filter(item => !item.adminOnly || isAdmin);
+  const renderMainMenu = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-6xl w-full p-4 md:p-6">
+      {!isVisitante && <MenuButton icon={UserPlus} title="Cadastro" onClick={() => setMenuAtivo('cadastro')} />}
+      <MenuButton icon={FileSignature} title="Orçamentos" onClick={() => setMenuAtivo('orcamentos')} />
+      <MenuButton icon={ShoppingCart} title="Pedidos" onClick={() => setMenuAtivo('pedidos')} />
+      <MenuButton icon={BarChart3} title="Relatórios" onClick={() => setMenuAtivo('relatorios')} />
+      {isAdmin && <MenuButton icon={Settings} title="Ferramentas Administrativas" onClick={() => setMenuAtivo('admin')} />}
+    </div>
+  );
+
+  const renderCadastroMenu = () => (
+    <div className="flex flex-col gap-6 w-full max-w-4xl">
+      <div className="flex items-center justify-between px-4">
+        <h3 className="text-xl font-serif font-bold text-gold-dark">Cadastro</h3>
+        <button onClick={() => setMenuAtivo('main')} className="text-xs font-bold text-gray-500 hover:text-gold-dark transition-colors">← Voltar ao Início</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4">
+        <MenuButton icon={UserPlus} title="Cadastro de Clientes" onClick={() => onNavigate('CadastroClientes')} />
+        <MenuButton icon={Package} title="Cadastro de Matéria-Prima" onClick={() => onNavigate('CadastroMateriaPrima')} />
+        <MenuButton icon={BookOpen} title="Cadastro de Produtos de Papelaria" onClick={() => onNavigate('CadastroPapelaria')} />
+        <MenuButton icon={Scissors} title="Cadastro de Produtos de Corte a Laser" onClick={() => onNavigate('CadastroLaser')} />
+      </div>
+    </div>
+  );
+
+  const renderOrcamentosMenu = () => (
+    <div className="flex flex-col gap-6 w-full max-w-4xl">
+      <div className="flex items-center justify-between px-4">
+        <h3 className="text-xl font-serif font-bold text-gold-dark">Orçamentos</h3>
+        <button onClick={() => setMenuAtivo('main')} className="text-xs font-bold text-gray-500 hover:text-gold-dark transition-colors">← Voltar ao Início</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4">
+        {!isVisitante && <MenuButton icon={FileSignature} title="Criar Orçamento" onClick={() => onNavigate('CriarOrcamento')} />}
+        <MenuButton icon={BarChart3} title="Relatório de Orçamentos" onClick={() => onNavigate('RelatorioOrcamentos')} />
+        <MenuButton icon={Clock} title="Orçamentos em Aberto" onClick={() => onNavigate('RelatorioOrcamentosAbertos')} />
+      </div>
+    </div>
+  );
+
+  const renderPedidosMenu = () => (
+    <div className="flex flex-col gap-6 w-full max-w-4xl">
+      <div className="flex items-center justify-between px-4">
+        <h3 className="text-xl font-serif font-bold text-gold-dark">Pedidos</h3>
+        <button onClick={() => setMenuAtivo('main')} className="text-xs font-bold text-gray-500 hover:text-gold-dark transition-colors">← Voltar ao Início</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-2 gap-4 p-4">
+        {!isVisitante && <MenuButton icon={ShoppingCart} title="Criar Pedido" onClick={() => onNavigate('CriarPedidoDeOrcamento')} />}
+        <MenuButton icon={ClipboardList} title="Relatório de Pedidos" onClick={() => onNavigate('RelatorioPedidos')} />
+      </div>
+    </div>
+  );
+
+  const renderRelatoriosMenu = () => (
+    <div className="flex flex-col gap-6 w-full max-w-5xl">
+      <div className="flex items-center justify-between px-4">
+        <h3 className="text-xl font-serif font-bold text-gold-dark">Relatórios</h3>
+        <button onClick={() => setMenuAtivo('main')} className="text-xs font-bold text-gray-500 hover:text-gold-dark transition-colors">← Voltar ao Início</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 p-4">
+        <MenuButton icon={Users} title="Relatório de Clientes" onClick={() => onNavigate('RelatorioClientes')} />
+        <MenuButton icon={ClipboardList} title="Relatório de Matéria-Prima" onClick={() => onNavigate('RelatorioMateriaPrima')} />
+        <MenuButton icon={ClipboardList} title="Relatório de Produtos de Papelaria" onClick={() => onNavigate('RelatorioPapelaria')} />
+        <MenuButton icon={ClipboardList} title="Relatório de Produtos Laser" onClick={() => onNavigate('RelatorioLaser')} />
+        <MenuButton icon={Clock} title="Linha de Produção (O.S.)" onClick={() => onNavigate('LinhaProducao')} />
+        <MenuButton icon={Cake} title="Aniversariantes" onClick={() => onNavigate('RelatorioAniversariantes')} />
+      </div>
+    </div>
+  );
+
+  const renderAdminMenu = () => (
+    <div className="flex flex-col gap-6 w-full max-w-5xl">
+      <div className="flex items-center justify-between px-4">
+        <h3 className="text-xl font-serif font-bold text-gold-dark">Ferramentas Administrativas</h3>
+        <button onClick={() => setMenuAtivo('main')} className="text-xs font-bold text-gray-500 hover:text-gold-dark transition-colors">← Voltar ao Início</button>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 gap-4 p-4">
+        <MenuButton icon={Clock} title="Linha de Produção (O.S.)" onClick={() => onNavigate('LinhaProducao')} />
+        <MenuButton icon={Calendar} title="Calendário Industrial" onClick={() => onNavigate('CalendarioIndustrial')} />
+        <MenuButton icon={BarChart3} title="Relatórios Gerenciais" onClick={() => onNavigate('RelatoriosGerenciais')} />
+        <MenuButton icon={Settings} title="Configuração de Sistema" onClick={() => onNavigate('Configuracoes')} />
+        <MenuButton icon={ClipboardList} title="Relatório de Usuários" onClick={() => onNavigate('RelatorioUsuarios')} />
+        <MenuButton icon={Users} title="Gerenciamento de Usuários" onClick={() => onNavigate('GerenciamentoUsuarios')} />
+      </div>
+    </div>
+  );
 
   return (
     <main className="flex-grow flex items-center justify-center px-4 py-2 relative z-10">
       <div className="absolute inset-0 max-w-6xl mx-auto my-auto h-[95%] bg-white/10 backdrop-blur-sm rounded-[2.5rem] -z-10 border border-white/20 shadow-2xl"></div>
       
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 max-w-6xl w-full p-4 md:p-6">
-        {menuItems.map((item, index) => (
-          <MenuButton key={index} icon={item.icon} title={item.title} onClick={() => onNavigate(item.tela)} />
-        ))}
-      </div>
+      {menuAtivo === 'main' && renderMainMenu()}
+      {menuAtivo === 'cadastro' && renderCadastroMenu()}
+      {menuAtivo === 'orcamentos' && renderOrcamentosMenu()}
+      {menuAtivo === 'pedidos' && renderPedidosMenu()}
+      {menuAtivo === 'relatorios' && renderRelatoriosMenu()}
+      {menuAtivo === 'admin' && renderAdminMenu()}
     </main>
   );
 };
@@ -267,6 +333,8 @@ const Footer = () => {
 
 function AppContent() {
   const [telaAtiva, setTelaAtiva] = useState('Dashboard');
+  const [menuAtivo, setMenuAtivo] = useState<'main' | 'cadastro' | 'orcamentos' | 'pedidos' | 'relatorios' | 'admin'>('main');
+  const [historico, setHistorico] = useState<string[]>(['Dashboard']);
   const [showAniversariosModal, setShowAniversariosModal] = useState(false);
   const [showBirthdayAlertModal, setShowBirthdayAlertModal] = useState(false);
   const [aniversariantesHoje, setAniversariantesHoje] = useState<Cliente[]>([]);
@@ -274,7 +342,20 @@ function AppContent() {
 
   const handleNavigation = (tela: string) => {
     console.log('Navigating to:', tela);
+    setHistorico(prev => [...prev, tela]);
     setTelaAtiva(tela);
+  };
+
+  const handleBackStep = () => {
+    if (historico.length > 1) {
+      const novoHistorico = [...historico];
+      novoHistorico.pop(); // Remove current
+      const anterior = novoHistorico[novoHistorico.length - 1];
+      setHistorico(novoHistorico);
+      setTelaAtiva(anterior);
+    } else {
+      setTelaAtiva('Dashboard');
+    }
   };
 
   useEffect(() => {
@@ -307,28 +388,42 @@ function AppContent() {
   }
 
   const renderTela = () => {
+    const props = { 
+      onNavigate: handleNavigation, 
+      onBack: () => { setMenuAtivo('main'); setTelaAtiva('Dashboard'); }, 
+      onBackStep: handleBackStep 
+    };
+    
+    const orcamentoProps = { ...props, onBackToCategory: () => { setMenuAtivo('orcamentos'); setTelaAtiva('Dashboard'); }, categoryName: 'Orçamentos' };
+    const pedidosProps = { ...props, onBackToCategory: () => { setMenuAtivo('pedidos'); setTelaAtiva('Dashboard'); }, categoryName: 'Pedidos' };
+    const relatoriosProps = { ...props, onBackToCategory: () => { setMenuAtivo('relatorios'); setTelaAtiva('Dashboard'); }, categoryName: 'Relatórios' };
+
     switch(telaAtiva) {
-      case 'Dashboard': return <GridMenu onNavigate={handleNavigation} />;
-      case 'CadastroClientes': return <CadastroClientes onNavigate={handleNavigation} />;
-      case 'RelatorioClientes': return <RelatorioClientes onNavigate={handleNavigation} />;
-      case 'CadastroMateriaPrima': return <CadastroMateriaPrima onNavigate={handleNavigation} />;
-      case 'RelatorioMateriaPrima': return <RelatorioMateriaPrima onNavigate={handleNavigation} />;
-      case 'CadastroPapelaria': return <CadastroPapelaria onNavigate={handleNavigation} />;
-      case 'RelatorioPapelaria': return <RelatorioPapelaria onNavigate={handleNavigation} />;
-      case 'CadastroLaser': return <CadastroLaser onNavigate={handleNavigation} />;
-      case 'RelatorioLaser': return <RelatorioLaser onNavigate={handleNavigation} />;
-      case 'Configuracoes': return <Configuracoes onNavigate={handleNavigation} />;
-      case 'CustoMaquina': return <CustoMaquina onNavigate={handleNavigation} />;
-      case 'CustosFixos': return <CustosFixos onNavigate={handleNavigation} />;
-      case 'CriarOrcamento': return <CriarOrcamento onNavigate={handleNavigation} />;
-      case 'RelatorioOrcamentos': return <RelatorioOrcamentos onNavigate={handleNavigation} />;
-      case 'CriarPedidoAvulso': return <CriarPedidoAvulso onNavigate={handleNavigation} />;
-      case 'RelatorioPedidos': return <RelatorioPedidos onNavigate={handleNavigation} />;
-      case 'LinhaProducao': return <LinhaProducao onNavigate={handleNavigation} />;
-      case 'CalendarioIndustrial': return <CalendarioIndustrial onNavigate={handleNavigation} />;
-      case 'RelatoriosGerenciais': return <RelatoriosGerenciais onNavigate={handleNavigation} />;
-      case 'GerenciamentoUsuarios': return <GerenciamentoUsuarios onNavigate={handleNavigation} />;
-      default: return <GridMenu onNavigate={handleNavigation} />;
+      case 'Dashboard': return <GridMenu onNavigate={handleNavigation} menuAtivo={menuAtivo} setMenuAtivo={setMenuAtivo} />;
+      case 'CadastroClientes': return <CadastroClientes {...props} />;
+      case 'RelatorioClientes': return <RelatorioClientes {...relatoriosProps} />;
+      case 'CadastroMateriaPrima': return <CadastroMateriaPrima {...props} />;
+      case 'RelatorioMateriaPrima': return <RelatorioMateriaPrima {...relatoriosProps} />;
+      case 'CadastroPapelaria': return <CadastroPapelaria {...props} />;
+      case 'RelatorioPapelaria': return <RelatorioPapelaria {...relatoriosProps} />;
+      case 'CadastroLaser': return <CadastroLaser {...props} />;
+      case 'RelatorioLaser': return <RelatorioLaser {...relatoriosProps} />;
+      case 'Configuracoes': return <Configuracoes {...props} />;
+      case 'CustoMaquina': return <CustoMaquina {...props} />;
+      case 'CustosFixos': return <CustosFixos {...props} />;
+      case 'CriarOrcamento': return <CriarOrcamento {...orcamentoProps} />;
+      case 'RelatorioOrcamentos': return <RelatorioOrcamentos {...orcamentoProps} />;
+      case 'CriarPedidoAvulso': return <CriarPedidoAvulso {...props} />;
+      case 'RelatorioPedidos': return <RelatorioPedidos {...pedidosProps} />;
+      case 'RelatorioOrcamentosAbertos': return <RelatorioOrcamentos {...orcamentoProps} filterStatus="PENDENTE" />;
+      case 'CriarPedidoDeOrcamento': return <RelatorioOrcamentos {...pedidosProps} filterStatus="PENDENTE" isConversionMode={true} />;
+      case 'RelatorioAniversariantes': return <RelatorioClientes {...relatoriosProps} initialSort="aniversario" />;
+      case 'LinhaProducao': return <LinhaProducao {...relatoriosProps} />;
+      case 'CalendarioIndustrial': return <CalendarioIndustrial {...props} />;
+      case 'RelatoriosGerenciais': return <RelatoriosGerenciais {...props} />;
+      case 'GerenciamentoUsuarios': return <GerenciamentoUsuarios {...props} />;
+      case 'RelatorioUsuarios': return <RelatorioUsuarios {...props} />;
+      default: return <GridMenu onNavigate={handleNavigation} menuAtivo={menuAtivo} setMenuAtivo={setMenuAtivo} />;
     }
   };
 

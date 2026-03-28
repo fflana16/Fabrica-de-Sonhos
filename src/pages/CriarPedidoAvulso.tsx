@@ -10,7 +10,19 @@ import { format, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { usePCP } from '../hooks/usePCP';
 
-export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
+export const CriarPedidoAvulso = ({ 
+  onNavigate, 
+  onBack,
+  onBackStep,
+  onBackToCategory,
+  categoryName 
+}: { 
+  onNavigate: (tela: string) => void;
+  onBack: () => void;
+  onBackStep?: () => void;
+  onBackToCategory?: () => void;
+  categoryName?: string;
+}) => {
   const {
     materiasPrimas,
     produtosLaser,
@@ -228,9 +240,11 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
       ...produtosLaser.map(p => ({ ...p, tipo: 'LASER' })),
       ...produtosPapelaria.map(p => ({ ...p, tipo: 'PAPELARIA' }))
     ];
-    return allProducts.filter(p => 
-      p.nome.toLowerCase().includes(searchTermProduto.toLowerCase()) && p.status === 'ATIVO'
-    );
+    return allProducts
+      .filter(p => 
+        p.nome.toLowerCase().includes(searchTermProduto.toLowerCase()) && p.status === 'ATIVO'
+      )
+      .sort((a, b) => a.nome.localeCompare(b.nome));
   }, [produtosLaser, produtosPapelaria, searchTermProduto]);
 
   const filteredClientes = useMemo(() => {
@@ -243,7 +257,13 @@ export const CriarPedidoAvulso = ({ onNavigate }: { onNavigate: (tela: string) =
   }, [clientes, searchTermCliente]);
 
   return (
-    <PageLayout title="Criar Pedido Avulso" onBack={() => onNavigate('Dashboard')}>
+    <PageLayout 
+      title="Criar Pedido Avulso" 
+      onBack={onBack} 
+      onBackStep={onBackStep}
+      onBackToCategory={onBackToCategory}
+      categoryName={categoryName}
+    >
       <div className="w-full max-w-7xl mx-auto flex flex-col gap-6">
         
         {/* Cabeçalho do Pedido */}

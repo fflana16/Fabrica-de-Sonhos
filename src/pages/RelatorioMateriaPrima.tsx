@@ -9,7 +9,7 @@ import {
 
 const DetalhesMPModal = ({ mp, onClose }: { mp: MateriaPrima, onClose: () => void }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-    <div className="bg-white/95 backdrop-blur-xl w-full max-w-3xl rounded-[2.5rem] p-10 shadow-2xl border border-gold/40 relative animate-in fade-in zoom-in duration-300">
+    <div className="bg-white/95 backdrop-blur-xl w-full max-w-3xl rounded-[2.5rem] p-10 shadow-2xl border border-gold/40 relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <button 
         onClick={onClose} 
         className="absolute top-8 right-8 p-2.5 rounded-full hover:bg-gold/10 text-gold-dark transition-all hover:scale-110"
@@ -89,8 +89,21 @@ const DetalhesMPModal = ({ mp, onClose }: { mp: MateriaPrima, onClose: () => voi
   </div>
 );
 
-export const RelatorioMateriaPrima = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
-  const { materiasPrimas, removerMateriaPrima, setMateriaPrimaParaEditar } = useSistemas();
+export const RelatorioMateriaPrima = ({ 
+  onNavigate, 
+  onBack,
+  onBackStep,
+  onBackToCategory,
+  categoryName 
+}: { 
+  onNavigate: (tela: string) => void;
+  onBack: () => void;
+  onBackStep?: () => void;
+  onBackToCategory?: () => void;
+  categoryName?: string;
+}) => {
+  const { materiasPrimas, removerMateriaPrima, setMateriaPrimaParaEditar, currentUser } = useSistemas();
+  const isVisitante = currentUser?.role === 'VISITANTE';
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc' | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ATIVO' | 'ELIMINADO' | 'TODOS'>('ATIVO');
@@ -135,8 +148,14 @@ export const RelatorioMateriaPrima = ({ onNavigate }: { onNavigate: (tela: strin
   };
 
   return (
-    <PageLayout title="Relatório de Matéria-Prima" onBack={() => onNavigate('Dashboard')}>
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-3 h-full overflow-hidden">
+    <PageLayout 
+      title="Relatório de Matéria-Prima" 
+      onBack={onBack} 
+      onBackStep={onBackStep}
+      onBackToCategory={onBackToCategory}
+      categoryName={categoryName}
+    >
+      <div className="w-full max-w-[98%] mx-auto flex flex-col gap-3">
         
         <div className="flex flex-col md:flex-row justify-between items-center gap-3 w-full shrink-0">
           <div className="relative w-full md:w-80">
@@ -178,17 +197,19 @@ export const RelatorioMateriaPrima = ({ onNavigate }: { onNavigate: (tela: strin
               Custo/mm²
             </button>
 
-            <button 
-              onClick={() => { setMateriaPrimaParaEditar(null); onNavigate('CadastroMateriaPrima'); }}
-              className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-gold-dark to-gold text-white px-4 py-1.5 rounded-full font-bold tracking-wide transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 text-[10px]"
-            >
-              <Plus size={14} />
-              Nova Matéria-Prima
-            </button>
+            {!isVisitante && (
+              <button 
+                onClick={() => { setMateriaPrimaParaEditar(null); onNavigate('CadastroMateriaPrima'); }}
+                className="flex items-center justify-center gap-1.5 bg-gradient-to-r from-gold-dark to-gold text-white px-4 py-1.5 rounded-full font-bold tracking-wide transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 text-[10px]"
+              >
+                <Plus size={14} />
+                Nova Matéria-Prima
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="glass-panel rounded-3xl overflow-hidden shadow-xl border border-gold/20 flex flex-col flex-grow min-h-0">
+        <div className="glass-panel rounded-3xl overflow-x-auto shadow-xl border border-gold/20 flex flex-col flex-grow min-h-0">
           <div className="overflow-y-auto custom-scrollbar flex-grow">
             <table className="w-full text-left border-collapse table-fixed">
               <thead className="sticky top-0 z-10">
@@ -242,7 +263,7 @@ export const RelatorioMateriaPrima = ({ onNavigate }: { onNavigate: (tela: strin
                         >
                           <Eye size={14} />
                         </button>
-                        {!isEliminado && (
+                        {!isEliminado && !isVisitante && (
                           <>
                             <button 
                               onClick={() => handleEdit(mp)}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PageLayout } from '../components/PageLayout';
 import { useSistemas, Cliente } from '../SistemasContext';
+import { parseDate as parseDateUtil } from '../utils/dateUtils';
 import { 
   Search, Plus, Eye, Trash2, Edit, X, Filter, SortAsc, Calendar as CalendarIcon, MapPin, User as UserIcon
 } from 'lucide-react';
@@ -8,7 +9,7 @@ import { toast } from 'sonner';
 
 const DetalhesModal = ({ cliente, onClose }: { cliente: Cliente, onClose: () => void }) => (
   <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-    <div className="bg-white/95 backdrop-blur-xl w-full max-w-2xl rounded-[2.5rem] p-10 shadow-2xl border border-gold/40 relative animate-in fade-in zoom-in duration-300">
+    <div className="bg-white/95 backdrop-blur-xl w-full max-w-2xl rounded-[2.5rem] p-10 shadow-2xl border border-gold/40 relative animate-in fade-in zoom-in duration-300 max-h-[90vh] overflow-y-auto custom-scrollbar">
       <button 
         onClick={onClose} 
         className="absolute top-8 right-8 p-2.5 rounded-full hover:bg-gold/10 text-gold-dark transition-all hover:scale-110"
@@ -82,15 +83,32 @@ const DetalhesModal = ({ cliente, onClose }: { cliente: Cliente, onClose: () => 
   </div>
 );
 
-export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
-  const { clientes, excluirCliente, setClienteParaEditar, orcamentos, pedidos } = useSistemas();
+export const RelatorioClientes = ({ 
+  onNavigate, 
+  onBack,
+  onBackStep,
+  onBackToCategory,
+  categoryName,
+  initialSort 
+}: { 
+  onNavigate: (tela: string) => void;
+  onBack: () => void;
+  onBackStep?: () => void;
+  onBackToCategory?: () => void;
+  categoryName?: string;
+  initialSort?: 'nome' | 'bairro' | 'cidade' | 'aniversario';
+}) => {
+  const { clientes, excluirCliente, setClienteParaEditar, orcamentos, pedidos, currentUser } = useSistemas();
+  const isVisitante = currentUser?.role === 'VISITANTE';
   const [searchTerm, setSearchTerm] = useState('');
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
   const [clienteParaExcluir, setClienteParaExcluir] = useState<Cliente | null>(null);
   
   // Novos estados para Filtro e Ordenação
   const [statusFilter, setStatusFilter] = useState<'ATIVO' | 'ELIMINADO' | 'TODOS'>('ATIVO');
-  const [sortBy, setSortBy] = useState<'nome' | 'bairro' | 'cidade' | 'aniversario'>('nome');
+  const [sortBy, setSortBy] = useState<'nome' | 'bairro' | 'cidade' | 'aniversario'>(initialSort || 'nome');
+
+  const pageTitle = initialSort === 'aniversario' ? "Relatório de Aniversariantes" : "Relatório de Clientes";
 
   const filteredAndSortedClientes = clientes
     .filter(cliente => {
@@ -102,6 +120,12 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
         cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         cliente.codigo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (cliente.cpfCnpj && cliente.cpfCnpj.includes(searchTerm));
+      
+      // Filtro de Aniversariantes (se for o relatório específico)
+      if (initialSort === 'aniversario' && searchTerm === '') {
+        const date = parseDateUtil(cliente.dataNascimento);
+        return !!date;
+      }
       
       return matchesStatus && matchesSearch;
     })
@@ -116,12 +140,13 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
         return (a.cidade || '').localeCompare(b.cidade || '');
       }
       if (sortBy === 'aniversario') {
-        // Regra Especial: Ignorar o ano (DD/MM/YYYY)
-        const parseDate = (dateStr: string) => {
-          const [day, month] = dateStr.split('/').map(Number);
-          return month * 100 + day; // Peso para ordenação MM DD
+        // Regra Especial: Ignorar o ano (DD/MM/YYYY ou YYYY-MM-DD)
+        const getSortWeight = (dateStr: string) => {
+          const date = parseDateUtil(dateStr);
+          if (!date) return 9999;
+          return (date.getMonth() + 1) * 100 + date.getDate(); // Peso para ordenação MM DD
         };
-        return parseDate(a.dataNascimento) - parseDate(b.dataNascimento);
+        return getSortWeight(a.dataNascimento) - getSortWeight(b.dataNascimento);
       }
       return 0;
     });
@@ -163,9 +188,28 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
     }
   };
 
+  const getMonthName = (dateStr: string) => {
+    if (!dateStr) return '-';
+    const parts = dateStr.split('/');
+    if (parts.length < 2) return '-';
+    const month = parts[1];
+    const months: { [key: string]: string } = {
+      '01': 'Janeiro', '02': 'Fevereiro', '03': 'Março', '04': 'Abril',
+      '05': 'Maio', '06': 'Junho', '07': 'Julho', '08': 'Agosto',
+      '09': 'Setembro', '10': 'Outubro', '11': 'Novembro', '12': 'Dezembro'
+    };
+    return months[month] || '-';
+  };
+
   return (
-    <PageLayout title="Relatório de Clientes" onBack={() => onNavigate('Dashboard')}>
-      <div className="w-full max-w-6xl mx-auto flex flex-col gap-4">
+    <PageLayout 
+      title={pageTitle} 
+      onBack={onBack} 
+      onBackStep={onBackStep}
+      onBackToCategory={onBackToCategory}
+      categoryName={categoryName}
+    >
+      <div className="w-full max-w-[98%] mx-auto flex flex-col gap-4">
         
         <div className="flex flex-col md:flex-row justify-between items-end gap-4 w-full">
           <div className="flex flex-col gap-4 w-full md:w-auto">
@@ -184,13 +228,15 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
           </div>
 
           <div className="flex flex-col items-end gap-3 w-full md:w-auto">
-            <button 
-              onClick={() => { setClienteParaEditar(null); onNavigate('CadastroClientes'); }}
-              className="flex items-center justify-center gap-2 bg-gradient-to-r from-gold-dark to-gold text-white px-5 py-2 rounded-full font-bold tracking-wide transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 text-xs"
-            >
-              <Plus size={16} />
-              Novo Cliente
-            </button>
+            {!isVisitante && (
+              <button 
+                onClick={() => { setClienteParaEditar(null); onNavigate('CadastroClientes'); }}
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-gold-dark to-gold text-white px-5 py-2 rounded-full font-bold tracking-wide transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 text-xs"
+              >
+                <Plus size={16} />
+                Novo Cliente
+              </button>
+            )}
 
             <div className="flex flex-wrap items-center justify-end gap-3">
               {/* Seletor de Status (Caixa de Seleção) */}
@@ -225,7 +271,7 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
           </div>
         </div>
 
-        <div className="glass-panel rounded-3xl overflow-hidden shadow-xl border border-gold/20">
+        <div className="glass-panel rounded-3xl overflow-x-auto shadow-xl border border-gold/20">
           <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
@@ -235,6 +281,9 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
                   <th className="py-3 px-4 font-serif font-semibold text-gold-dark tracking-wide text-sm">Localização</th>
                   <th className="py-3 px-4 font-serif font-semibold text-gold-dark tracking-wide text-sm">WhatsApp</th>
                   <th className="py-3 px-4 font-serif font-semibold text-gold-dark tracking-wide text-sm">Aniversário</th>
+                  {initialSort === 'aniversario' && (
+                    <th className="py-3 px-4 font-serif font-semibold text-gold-dark tracking-wide text-sm">Mês</th>
+                  )}
                   <th className="py-3 px-4 font-serif font-semibold text-gold-dark tracking-wide text-sm">Status</th>
                   <th className="py-3 px-4 font-serif font-semibold text-gold-dark tracking-wide text-sm text-center">Ações</th>
                 </tr>
@@ -265,6 +314,11 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
                           {cliente.dataNascimento}
                         </div>
                       </td>
+                      {initialSort === 'aniversario' && (
+                        <td className={`py-3 px-4 text-[11px] font-bold ${isEliminado ? 'text-red-600' : 'text-gold-dark'}`}>
+                          {getMonthName(cliente.dataNascimento)}
+                        </td>
+                      )}
                       <td className="py-3 px-4">
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${isEliminado ? 'bg-red-100 text-red-700 border-red-200' : 'bg-green-100 text-green-700 border-green-200'}`}>
                           {isEliminado ? 'Eliminado' : 'Ativo'}
@@ -278,7 +332,7 @@ export const RelatorioClientes = ({ onNavigate }: { onNavigate: (tela: string) =
                         >
                           <Eye size={16} />
                         </button>
-                        {!isEliminado && (
+                        {!isEliminado && !isVisitante && (
                           <>
                             <button 
                               onClick={() => handleEdit(cliente)}

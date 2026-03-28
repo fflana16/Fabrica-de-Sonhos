@@ -73,8 +73,8 @@ export interface User {
   nome: string;
   senha: string;
   telefone?: string;
-  role: 'ADMIN' | 'OPERADOR';
-  status: 'ATIVO' | 'PENDENTE';
+  role: 'ADMIN' | 'OPERADOR' | 'VISITANTE';
+  status: 'ATIVO' | 'PENDENTE' | 'INATIVO';
 }
 
 export interface Cliente {
@@ -224,6 +224,8 @@ interface SistemasContextType {
   pedidos: Pedido[];
   currentUser: User | null;
   users: User[];
+  userParaEditar: User | null;
+  setUserParaEditar: (user: User | null) => void;
   clienteParaEditar: Cliente | null;
   setClienteParaEditar: (cliente: Cliente | null) => void;
   materiaPrimaParaEditar: MateriaPrima | null;
@@ -294,6 +296,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
   const [custosFixos, setCustosFixos] = useState<CustoFixo[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [userParaEditar, setUserParaEditar] = useState<User | null>(null);
   const [orcamentos, setOrcamentos] = useState<Orcamento[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [isAuthReady, setIsAuthReady] = useState(false);
@@ -332,6 +335,7 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
 
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const data = snapshot.docs.map(doc => doc.data() as User);
+      
       if (data.length === 0) {
         // Initial bootstrap of users if collection is empty
         const initialUsers: User[] = [
@@ -343,6 +347,19 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
         });
       } else {
         setUsers(data);
+        
+        // Check for 'Visitante' user as requested
+        const hasVisitante = data.some(u => u.nome.toLowerCase() === 'visitante');
+        if (!hasVisitante) {
+          const visitante: User = {
+            nome: 'Visitante',
+            senha: '12345678',
+            role: 'VISITANTE',
+            status: 'ATIVO',
+            telefone: '(00) 00000-0000'
+          };
+          setDoc(doc(db, 'users', 'Visitante'), visitante).catch(e => console.error("Erro ao criar Visitante:", e));
+        }
       }
     }, (error) => handleFirestoreError(error, OperationType.LIST, 'users'));
 
@@ -423,6 +440,9 @@ export const SistemasProvider = ({ children }: { children: ReactNode }) => {
     if (user) {
       if (user.status === 'PENDENTE') {
         return { success: false, error: 'PENDING' as const };
+      }
+      if (user.status === 'INATIVO') {
+        return { success: false, error: 'INACTIVE' as const };
       }
       setCurrentUser(user);
       return { success: true };

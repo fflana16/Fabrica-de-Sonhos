@@ -3,7 +3,7 @@ import { PageLayout } from '../components/PageLayout';
 import { useSistemas, Pedido } from '../SistemasContext';
 import { toast } from 'sonner';
 import {
-  Search, Trash2, Eye, FileText, CheckCircle2, XCircle, Clock, DollarSign, Package, AlertTriangle, ChevronDown, Filter, Check
+  Search, Trash2, Eye, FileText, CheckCircle2, XCircle, Clock, DollarSign, Package, AlertTriangle, ChevronDown, Filter, Check, ShoppingCart
 } from 'lucide-react';
 import { format, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -12,8 +12,21 @@ import { RelatorioPedidoModal } from '../components/modals/RelatorioPedidoModal'
 import { StatusEntregaModal } from '../components/modals/StatusEntregaModal';
 import { CancelamentoPedidoModal } from '../components/modals/CancelamentoPedidoModal';
 
-export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) => void }) => {
-  const { pedidos, clientes, setPedidoParaEditar } = useSistemas();
+export const RelatorioPedidos = ({ 
+  onNavigate, 
+  onBack,
+  onBackStep,
+  onBackToCategory,
+  categoryName 
+}: { 
+  onNavigate: (tela: string) => void;
+  onBack: () => void;
+  onBackStep?: () => void;
+  onBackToCategory?: () => void;
+  categoryName?: string;
+}) => {
+  const { pedidos, clientes, setPedidoParaEditar, currentUser } = useSistemas();
+  const isVisitante = currentUser?.role === 'VISITANTE';
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatuses, setSelectedStatuses] = useState<Pedido['status'][]>([]);
   const [pedidoSelecionado, setPedidoSelecionado] = useState<Pedido | null>(null);
@@ -98,8 +111,14 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
   };
 
   return (
-    <PageLayout title="Relatório de Pedidos" onBack={() => onNavigate('Dashboard')}>
-      <div className="w-full max-w-7xl mx-auto mt-8 flex flex-col gap-6">
+    <PageLayout 
+      title="Relatório de Pedidos" 
+      onBack={onBack} 
+      onBackStep={onBackStep}
+      onBackToCategory={onBackToCategory}
+      categoryName={categoryName}
+    >
+      <div className="w-full max-w-[98%] mx-auto mt-8 flex flex-col gap-6">
         
         <div className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
@@ -115,6 +134,16 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
                 className="w-full bg-white/40 backdrop-blur-sm border border-gold/30 rounded-full py-2 pl-9 pr-4 text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:border-gold transition-all shadow-sm"
               />
             </div>
+
+            {!isVisitante && (
+              <button
+                onClick={() => onNavigate('CriarPedidoDeOrcamento')}
+                className="bg-gold hover:bg-gold-dark text-white font-bold py-2 px-6 rounded-full transition-all shadow-md flex items-center gap-2 text-sm"
+              >
+                <ShoppingCart size={18} />
+                CRIAR NOVO PEDIDO
+              </button>
+            )}
             
             {selectedStatuses.length > 0 && (
               <button 
@@ -154,24 +183,27 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
           </div>
         </div>
 
-        <div className="glass-panel rounded-3xl overflow-hidden shadow-xl border border-gold/20">
-          <table className="w-full text-left border-collapse">
+        <div className="glass-panel rounded-3xl overflow-x-auto shadow-xl border border-gold/20">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-gold/15 border-b border-gold/20">
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">ID</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">Urgente?</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">Cliente</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">Itens</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">Total</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">Status</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm">Data Criação</th>
-                <th className="py-4 px-6 font-serif font-bold text-gold-dark text-sm text-center">Ações</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">ID</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Urgente?</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Cliente</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Itens</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Total</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Status</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Data Criação</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Orçamento Origem</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Data Conversão</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm">Previsão Entrega</th>
+                <th className="py-4 px-3 font-serif font-bold text-gold-dark text-sm text-center">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filteredPedidos.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
+                  <td colSpan={11} className="py-8 text-center text-gray-500">Nenhum pedido encontrado.</td>
                 </tr>
               ) : (
                 filteredPedidos.map(ped => {
@@ -182,13 +214,13 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
                       key={ped.id} 
                       className={`border-b border-gold/10 hover:bg-white/30 transition-colors group ${isUrgent ? 'bg-red-50/60' : ''}`}
                     >
-                      <td className="py-4 px-6 text-sm font-semibold text-gray-800">
+                      <td className="py-4 px-3 text-sm font-semibold text-gray-800">
                         {ped.id}
                       </td>
-                      <td className={`py-4 px-6 text-xs font-bold ${isUrgent ? 'text-red-600' : 'text-gray-500'}`}>
+                      <td className={`py-4 px-3 text-xs font-bold ${isUrgent ? 'text-red-600' : 'text-gray-500'}`}>
                         {isUrgent ? 'PC Urgente' : 'PC Normal'}
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-700">
+                      <td className="py-4 px-3 text-sm text-gray-700">
                         <div className="flex items-center gap-2">
                           {cliente?.nome || 'N/A'}
                           {ped.itens.some(item => item.isIgreja) && (
@@ -198,17 +230,17 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-700">
+                      <td className="py-4 px-3 text-sm text-gray-700">
                         {ped.itens.map(item => item.nomeProduto).join(', ')}
                       </td>
-                      <td className="py-4 px-6 text-sm font-mono font-bold text-gold-dark">R$ {ped.totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                      <td className="py-4 px-6">
+                      <td className="py-4 px-3 text-sm font-mono font-bold text-gold-dark">R$ {ped.totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                      <td className="py-4 px-3">
                         <div className="relative group/status">
                           <select
                             value={ped.status}
                             onChange={(e) => handleStatusChange(ped, e.target.value as any)}
-                            disabled={ped.status === 'CANCELADO'}
-                            className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium focus:outline-none transition-all ${ped.status === 'CANCELADO' ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} ${getStatusColor(ped.status)}`}
+                            disabled={ped.status === 'CANCELADO' || ped.status === 'Entregue' || isVisitante}
+                            className={`appearance-none px-3 py-1 pr-8 rounded-full text-xs font-medium focus:outline-none transition-all ${ped.status === 'CANCELADO' || ped.status === 'Entregue' || isVisitante ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'} ${getStatusColor(ped.status)}`}
                           >
                             <option value="Confirmado">Confirmado</option>
                             <option value="Prioridade Urgente">Prioridade Urgente</option>
@@ -221,19 +253,30 @@ export const RelatorioPedidos = ({ onNavigate }: { onNavigate: (tela: string) =>
                           <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-50" />
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-xs text-gray-500">{safeFormat(ped.dataCriacao, 'dd/MM/yyyy HH:mm')}</td>
-                      <td className="py-4 px-6 flex justify-center gap-2">
+                      <td className="py-4 px-3 text-xs text-gray-500">{safeFormat(ped.dataCriacao, 'dd/MM/yyyy HH:mm')}</td>
+                      <td className="py-4 px-3 text-sm text-gray-700 font-semibold">
+                        {ped.orcamentoId || '-'}
+                      </td>
+                      <td className="py-4 px-3 text-xs text-gray-500">
+                        {ped.orcamentoId ? safeFormat(ped.dataCriacao, 'dd/MM/yyyy HH:mm') : '-'}
+                      </td>
+                      <td className="py-4 px-3 text-xs text-gray-500">
+                        {safeFormat(ped.dataEntrega, 'dd/MM/yyyy')}
+                      </td>
+                      <td className="py-4 px-3 flex justify-center gap-2">
                         <button onClick={() => handleViewDetails(ped)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Ver Detalhes">
                           <Eye size={16} />
                         </button>
-                        <button 
-                          onClick={() => handleDeleteClick(ped)} 
-                          disabled={ped.status === 'CANCELADO'}
-                          className={`p-2 rounded-lg transition-colors ${ped.status === 'CANCELADO' ? 'text-gray-300 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50'}`}
-                          title="Eliminar Pedido"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {!isVisitante && (
+                          <button 
+                            onClick={() => handleDeleteClick(ped)} 
+                            disabled={ped.status === 'CANCELADO' || ped.status === 'Entregue'}
+                            className={`p-2 rounded-lg transition-colors ${ped.status === 'CANCELADO' || ped.status === 'Entregue' ? 'text-gray-300 cursor-not-allowed' : 'text-red-400 hover:text-red-600 hover:bg-red-50'}`}
+                            title={ped.status === 'Entregue' ? "Pedidos entregues não podem ser eliminados" : "Eliminar Pedido"}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
