@@ -18,12 +18,8 @@ export const ReciboEntregaA5 = forwardRef<HTMLDivElement, ReciboEntregaA5Props>(
         {/* Cabeçalho */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #1f2937', paddingBottom: '1rem', marginBottom: '1.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ width: '4rem', height: '4rem', borderRadius: '9999px', border: '2px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6', overflow: 'hidden' }}>
-              <img 
-                src="https://raw.githubusercontent.com/fflana16/Fabrica-de-Sonhos/main/src/Logo_Colorida.png" 
-                alt="Logo RF" 
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+            <div style={{ width: '4rem', height: '4rem', borderRadius: '9999px', border: '2px solid #1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f3f4f6' }}>
+              <span style={{ fontFamily: 'serif', fontWeight: 'bold', color: '#1f2937', fontSize: '1.25rem' }}>RF</span>
             </div>
             <div>
               <h1 style={{ fontFamily: 'serif', fontSize: '1.5rem', fontWeight: 'bold', color: '#111827', lineHeight: '1.25', margin: 0 }}>Rosi e Freire</h1>
