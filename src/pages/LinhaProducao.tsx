@@ -182,7 +182,6 @@ export const LinhaProducao = ({
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-6 text-sm text-gray-700">{cliente?.nome || 'N/A'}</td>
                       <td className="py-4 px-6 text-sm text-gray-700">
                         {ped.itens.slice(0, 2).map(item => item.nomeProduto).join(', ')}
                         {ped.itens.length > 2 && ` e mais ${ped.itens.length - 2} itens`}

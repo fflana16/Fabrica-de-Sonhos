@@ -112,7 +112,7 @@ const Header = ({ onShowAniversarios, onNavigate }: { onShowAniversarios: () => 
         <div className="w-14 h-14 relative flex items-center justify-center shrink-0">
            <div className="absolute inset-0 bg-gold/20 rounded-full blur-md"></div>
            <img 
-             src="https://ui-avatars.com/api/?name=RF&background=D4AF37&color=fff&font-size=0.4&rounded=true" 
+             src="https://raw.githubusercontent.com/fflana16/Fabrica-de-Sonhos/main/src/Logo_Colorida.png" 
              alt="Logo Rosi e Freire" 
              className="w-12 h-12 object-contain relative z-10 rounded-full border-2 border-gold shadow-lg"
            />
@@ -304,8 +304,12 @@ const Footer = () => {
 
         {/* Logo Central Rodapé */}
         <div className="flex flex-col items-center gap-1.5 flex-1">
-          <div className="w-10 h-10 rounded-full border border-gold/50 flex items-center justify-center bg-white/5 shadow-[0_0_15px_rgba(212,175,55,0.2)]">
-            <span className="font-serif font-bold text-gold text-base">RF</span>
+          <div className="w-10 h-10 rounded-full border border-gold/50 flex items-center justify-center bg-white/5 shadow-[0_0_15px_rgba(212,175,55,0.2)] overflow-hidden">
+            <img 
+              src="https://raw.githubusercontent.com/fflana16/Fabrica-de-Sonhos/main/src/Logo_Colorida.png" 
+              alt="Logo RF" 
+              className="w-full h-full object-cover"
+            />
           </div>
           <p className="font-serif italic text-gold-light/70 text-xs">Fábrica de Sonhos</p>
         </div>
