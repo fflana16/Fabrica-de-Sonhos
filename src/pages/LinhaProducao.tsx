@@ -8,6 +8,7 @@ import {
 import { format, differenceInDays, addDays, isValid } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { safeFormat, parseDate } from '../utils/dateUtils';
+import { RelatorioPedidoModal } from '../components/modals/RelatorioPedidoModal';
 
 export const LinhaProducao = ({ 
   onNavigate, 
@@ -22,7 +23,7 @@ export const LinhaProducao = ({
   onBackToCategory?: () => void;
   categoryName?: string;
 }) => {
-  const { pedidos, clientes, updatePedidoStatus } = useSistemas();
+  const { pedidos, clientes, updatePedidoStatus, setPedidoParaEditar } = useSistemas();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'TODOS' | Pedido['status']>('TODOS');
   const [pedidoSelecionado, setPedidoSelecionado] = useState<Pedido | null>(null);
@@ -83,6 +84,11 @@ export const LinhaProducao = ({
 
   const handleViewDetails = (pedido: Pedido) => {
     setPedidoSelecionado(pedido);
+  };
+
+  const handleEdit = (pedido: Pedido) => {
+    setPedidoParaEditar(pedido);
+    onNavigate('CriarPedidoAvulso');
   };
 
   const handleUpdateStatus = (pedidoId: string, newStatus: Pedido['status']) => {
@@ -208,80 +214,14 @@ export const LinhaProducao = ({
 
       {/* Modal de Detalhes da Ordem de Produção */}
       {pedidoSelecionado && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl p-8 max-w-3xl w-full shadow-2xl border border-gold/30 animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center mb-6 border-b border-gold/20 pb-4">
-              <h3 className="text-xl font-serif font-bold text-gray-900">
-                Detalhes da O.S.: {pedidoSelecionado.id}
-              </h3>
-              <button onClick={() => setPedidoSelecionado(null)} className="text-gray-400 hover:text-gray-600">
-                <XCircle size={24} />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-4">
-              <p className="text-sm text-gray-700"><span className="font-semibold">Cliente:</span> {clientes.find(c => c.codigo === pedidoSelecionado.clienteCodigo)?.nome || 'N/A'}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Orçamento Origem:</span> {pedidoSelecionado.orcamentoId || 'N/A'}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Data de Criação:</span> {safeFormat(pedidoSelecionado.dataCriacao, 'dd/MM/yyyy HH:mm')}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Operador:</span> {pedidoSelecionado.operadorCriacao}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Status Atual:</span> <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(pedidoSelecionado.status)}`}>{pedidoSelecionado.status}</span></p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Data Entrega Desejada:</span> {safeFormat(pedidoSelecionado.dataEntrega)}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Data Sugerida PCP:</span> {pedidoSelecionado.dataSugeriaPCP || 'N/A'}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Forma de Pagamento:</span> {pedidoSelecionado.formaPagamento || 'N/A'}</p>
-              <p className="text-sm text-gray-700"><span className="font-semibold">Sinal Pago:</span> R$ {pedidoSelecionado.sinalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-
-              <h4 className="font-serif font-bold text-md text-gold-dark mt-4">Itens da O.S.:</h4>
-              <div className="grid grid-cols-1 gap-3">
-                {pedidoSelecionado.itens.map(item => (
-                  <div key={item.id} className="bg-gray-50 p-3 rounded-xl border border-gray-200 flex flex-col gap-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-gray-800 flex items-center gap-2">
-                        <Package size={16} /> {item.nomeProduto}
-                      </span>
-                      {item.isIgreja && (
-                        <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-1.5 py-0.5 rounded border border-amber-200">
-                          IGREJA
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-gray-600 ml-6">Qtd: {item.quantidade} | Preço Unitário: R$ {item.precoVendaUnitario.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    <span className="text-xs text-gray-500 ml-6">Custo Material: R$ {item.custoMaterial.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Custo Máquina: R$ {item.custoMaquina.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    <span className="text-xs text-gray-500 ml-6">Custo Pintura: R$ {item.custoPintura.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} | Custo Montagem: R$ {item.custoMontagem.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                    {item.observacoes && <span className="text-xs text-gray-600 italic ml-6">Obs: {item.observacoes}</span>}
-                    {!item.aprovado && <span className="text-xs text-red-500 ml-6 flex items-center gap-1"><AlertTriangle size={12} /> Item Recusado: {item.justificativaRecusa || 'Sem justificativa'}</span>}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-4 p-4 bg-gold/10 rounded-2xl border border-gold/30 flex justify-between items-center">
-                <span className="font-bold text-lg text-gold-dark">Total Geral:</span>
-                <span className="font-mono font-black text-2xl text-gold-dark">R$ {pedidoSelecionado.totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-3">
-              <select
-                value={pedidoSelecionado.status}
-                onChange={(e) => handleUpdateStatus(pedidoSelecionado.id, e.target.value as Pedido['status'])}
-                className="bg-white/40 backdrop-blur-sm border border-gold/30 rounded-xl py-2 px-3 text-sm text-gray-800 focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all hover:bg-white/60"
-              >
-                <option value="Confirmado">Confirmado</option>
-                <option value="Em Produção">Em Produção</option>
-                <option value="Em Acabamento">Em Acabamento</option>
-                <option value="Pronto">Pronto</option>
-                <option value="Entregue">Entregue</option>
-                <option value="Prioridade Urgente">Prioridade Urgente</option>
-              </select>
-              <button 
-                onClick={() => setPedidoSelecionado(null)}
-                className="bg-gray-300 text-gray-800 px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:scale-105 transition-transform shadow-lg shadow-gray-400/20"
-              >
-                <XCircle size={20} />
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
+        <RelatorioPedidoModal 
+          pedido={pedidoSelecionado}
+          onClose={() => setPedidoSelecionado(null)}
+          onEdit={(pedido) => {
+            setPedidoSelecionado(null);
+            handleEdit(pedido);
+          }}
+        />
       )}
     </PageLayout>
   );
